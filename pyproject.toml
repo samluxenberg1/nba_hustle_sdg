@@ -1,0 +1,20 @@
+[project]
+name = "nba-hustle-sdg"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "nba-api>=1.10.0",
+    "pandas>=2.3.2",
+    "py-ball>=1.42",
+    "scikit-learn>=1.6.1",
+    "scipy>=1.13.1",
+    "seaborn>=0.13.2",
+    "statsmodels>=0.14.5",
+]
+
+[dependency-groups]
+dev = [
+    "jupyter>=1.1.1",
+]

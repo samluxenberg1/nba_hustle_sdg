@@ -1,3 +1,7 @@
+.csv
+.DS_Store
+.python-version
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
