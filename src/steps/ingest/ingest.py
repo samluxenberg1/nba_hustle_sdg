@@ -55,7 +55,7 @@ class ExtractData:
             )
             df_lgl = lgl.get_data_frames()[0]
             df_logs = pd.concat([df_logs, df_lgl])
-            logger.info(f"--> Appended {len(df_lgl)} games from season {season}")
+            logger.info(f"--> Appended {len(df_lgl)/2} games from season {season}")
             self.game_ids = df_logs['GAME_ID'].unique()
 
         self.summarize_game_logs(df_logs)
@@ -72,7 +72,7 @@ class ExtractData:
         for chunk_file in chunk_files:
             chunk_path = os.path.join(output_dir, chunk_file)
             try:
-                df_chunk = pd.read_csv(chunk_path)
+                df_chunk = pd.read_csv(chunk_path, dtype={'GAME_ID': str})
                 if 'GAME_ID' in df_chunk.columns:
                     chunk_ids = set(df_chunk['GAME_ID'].unique())
                     processed_ids.update(chunk_ids)
@@ -147,9 +147,10 @@ class ExtractData:
         
         # Get already processed game IDs
         processed_ids = self.get_processed_game_ids(output_dir)
-        
+    
         # Filter out already processed games
         remaining_game_ids = [gid for gid in self.game_ids if gid not in processed_ids]
+        
         logger.info(f"Remaining games to process: {len(remaining_game_ids)} out of {len(self.game_ids)}")
         
         if not remaining_game_ids:
