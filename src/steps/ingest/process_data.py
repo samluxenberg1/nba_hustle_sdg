@@ -54,7 +54,7 @@ class ProcessData:
             how='left'
         )
         df_hustle.loc[df_hustle['HOME_IND'].isna(), 'HOME_IND'] = 'AWAY'
-        
+
         # Drop unnecessary columns
         cols_to_drop = ['TEAM_NAME','TEAM_ABBREVIATION','TEAM_CITY','MINUTES','PTS','HOME_TEAM_ID']
         df_hustle.drop(cols_to_drop, axis=1, inplace=True)
@@ -68,7 +68,7 @@ class ProcessData:
 
         return self.df_proc_hustle
     
-    def process_data(self):
+    def process_data(self, output_dir: str):
         
         # Step 1 - Process Game Logs
         df_proc_logs = self.process_logs()
@@ -84,6 +84,11 @@ class ProcessData:
             how='inner'
         )
 
+        # Step 4 - Save data
+        os.makedirs(output_dir, exist_ok=True)
+        output_path = os.path.join(output_dir, 'df_processed.csv')
+        self.df_proc.to_csv(output_path, index=False)
+
         return self.df_proc
 
 
@@ -93,8 +98,11 @@ class ProcessData:
 
 if __name__=='__main__':
     # Read in log data
-    DATA_DIR = '../../data/'
+    
+
+    DATA_DIR = 'data/'
     lgl_path = os.path.join(DATA_DIR, 'df_logs.csv')
+
     df_logs = pd.read_csv(lgl_path)
     hustle_files = [f for f in os.listdir(DATA_DIR) if f.startswith('df_hustle')]
     hustle_paths = [os.path.join(DATA_DIR, f) for f in hustle_files]
@@ -106,6 +114,8 @@ if __name__=='__main__':
     neutral_dict = dict(zip(neutral_game_ids,neutral_home_teams))
     
     proc_data = ProcessData(df_logs = df_logs, df_hustle=df_hustle, neutral_dict=neutral_dict)
-    df_proc = proc_data.process_data()
+    
+    output_dir = os.path.join(DATA_DIR, 'processed_data')
+    df_proc = proc_data.process_data(output_dir=output_dir)
 
     print(df_proc.head())
