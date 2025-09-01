@@ -200,7 +200,7 @@ class CompositeEffort:
         """Print composite effort statistics and correlation"""
         
         percentiles = [.001,.01,.05,.1,.2,.25,.3,.4,.5,.6,.7,.75,.8,.9,.95,.99,.999]
-        print(X['COMPOSITE_EFFORT'].describe(percentiles))
+        print(self.X['COMPOSITE_EFFORT'].describe(percentiles))
 
         # Correlations
         pearson_stat, pearson_pval = stats.pearsonr(self.X['COMPOSITE_EFFORT'],self.y)
