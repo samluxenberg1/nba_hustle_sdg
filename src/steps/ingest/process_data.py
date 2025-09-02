@@ -108,6 +108,7 @@ if __name__=='__main__':
     hustle_paths = [os.path.join(DATA_DIR, f) for f in hustle_files]
     df_hustle_list = [pd.read_csv(f) for f in hustle_paths]
     df_hustle = pd.concat(df_hustle_list)
+    df_hustle = df_hustle.drop_duplicates()
     
     neutral_game_ids = [22400147, 22401230, 22401229, 22400621, 22400633]
     neutral_home_teams = ['WAS','OKC','ATL','IND','SAS']
