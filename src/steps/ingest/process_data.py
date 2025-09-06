@@ -68,6 +68,7 @@ class ProcessData:
 
         return self.df_proc_hustle
     
+    
     def process_data(self, output_dir: str):
         
         # Step 1 - Process Game Logs
@@ -76,13 +77,17 @@ class ProcessData:
         # Step 2 - Process Hustle Data
         df_proc_hustle = self.process_hustle()
 
-        # Step 3 - Join Game Logs and Hustle
+        # Step 3 - Process Four Factors Data
+        #df_proc_four_factors = self.process_four_factors()
+
+        # Step 4 - Join Game Logs, Hustle, Four Factors
         df_proc_hustle.drop(['HOME_TEAM_ID','AWAY_TEAM_ID'], axis=1, inplace=True)
         self.df_proc = self.df_proc_logs.merge(
             self.df_proc_hustle, 
             on='GAME_ID',
             how='inner'
         )
+
 
         # Step 4 - Save data
         os.makedirs(output_dir, exist_ok=True)
@@ -108,6 +113,7 @@ if __name__=='__main__':
     hustle_paths = [os.path.join(DATA_DIR, f) for f in hustle_files]
     df_hustle_list = [pd.read_csv(f) for f in hustle_paths]
     df_hustle = pd.concat(df_hustle_list)
+    df_hustle = df_hustle.drop_duplicates()
     
     neutral_game_ids = [22400147, 22401230, 22401229, 22400621, 22400633]
     neutral_home_teams = ['WAS','OKC','ATL','IND','SAS']

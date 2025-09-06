@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import numpy as np
 import statsmodels.api as sm
-from typing import Optional, Dict, Union
+from typing import Optional, Dict, Union, Literal
 from statsmodels.regression.linear_model import RegressionResultsWrapper
 
 import matplotlib.pyplot as plt
@@ -164,48 +164,49 @@ class CompositeEffort:
         axes[2].legend(loc='best')
 
     
-    def create_composite_effort(self):
+    def create_composite_effort(self, off_def: Literal['off','def']):
         """Create composite effort"""
         if self.reg_stage1 is None:
             raise ValueError("Stage 1 model must be fitted first")
         
         effort_vec = np.array(self.reg_stage1.params[1:]).reshape((-1,1))
         effort_mat = np.array(self.X)
-        self.X['COMPOSITE_EFFORT'] = effort_mat @ effort_vec
+
+        self.X[f'{off_def.upper()}_COMPOSITE_EFFORT'] = effort_mat @ effort_vec
 
     
-    def analyze_composite_effort(self):
+    def analyze_composite_effort(self, off_def: Literal['off','def']):
         """Analyze composite effor distribution and correlation"""
-        self._plot_composite_effort_analysis()
-        self._print_composite_effort_stats()
+        self._plot_composite_effort_analysis(off_def)
+        self._print_composite_effort_stats(off_def)
 
-    def _plot_composite_effort_analysis(self):
+    def _plot_composite_effort_analysis(self, off_def: Literal['off','def']):
         
         plot_data = pd.DataFrame(
             {
-                'COMPOSITE_EFFORT': self.X['COMPOSITE_EFFORT'],
+                f'{off_def.upper()}_COMPOSITE_EFFORT': self.X[f'{off_def.upper()}_COMPOSITE_EFFORT'],
                 'y': self.y
             }
         )
         
         fig, ax = plt.subplots(1,3, figsize=(20,5))
-        sns.histplot(x='COMPOSITE_EFFORT', data=plot_data, ax=ax[0])
-        sns.ecdfplot(x='COMPOSITE_EFFORT', data=plot_data, ax=ax[1])
-        sns.scatterplot(x='COMPOSITE_EFFORT', y='y', data=plot_data, ax=ax[2])
+        sns.histplot(x=f'{off_def.upper()}_COMPOSITE_EFFORT', data=plot_data, ax=ax[0])
+        sns.ecdfplot(x=f'{off_def.upper()}_COMPOSITE_EFFORT', data=plot_data, ax=ax[1])
+        sns.scatterplot(x=f'{off_def.upper()}_COMPOSITE_EFFORT', y='y', data=plot_data, ax=ax[2])
 
         plt.tight_layout()
         plt.show()
     
-    def _print_composite_effort_stats(self):
+    def _print_composite_effort_stats(self, off_def: Literal['off','def']):
         """Print composite effort statistics and correlation"""
         
         percentiles = [.001,.01,.05,.1,.2,.25,.3,.4,.5,.6,.7,.75,.8,.9,.95,.99,.999]
-        print(X['COMPOSITE_EFFORT'].describe(percentiles))
+        print(self.X[f'{off_def.upper()}_COMPOSITE_EFFORT'].describe(percentiles))
 
         # Correlations
-        pearson_stat, pearson_pval = stats.pearsonr(self.X['COMPOSITE_EFFORT'],self.y)
-        spearman_stat, spearman_pval = stats.spearmanr(self.X['COMPOSITE_EFFORT'],self.y)
-        kendall_stat, kendall_pval = stats.kendalltau(self.X['COMPOSITE_EFFORT'],self.y)
+        pearson_stat, pearson_pval = stats.pearsonr(self.X[f'{off_def.upper()}_COMPOSITE_EFFORT'],self.y)
+        spearman_stat, spearman_pval = stats.spearmanr(self.X[f'{off_def.upper()}_COMPOSITE_EFFORT'],self.y)
+        kendall_stat, kendall_pval = stats.kendalltau(self.X[f'{off_def.upper()}_COMPOSITE_EFFORT'],self.y)
 
         print(f"\n\nPearson Correlation: {pearson_stat: .3f}, P-value: {pearson_pval: .5f}")
         print(f"Spearman Correlation: {spearman_stat: .3f}, P-value: {spearman_pval: .5f}")
@@ -219,14 +220,14 @@ class CompositeEffort:
 
         return self.reg_stage1
     
-    def estimate_composite_effort(self, output_dir: str):
+    def estimate_composite_effort(self, off_def: Literal['off','def'], output_dir: str):
         """Complete composite effort workflow"""
-        self.create_composite_effort()
-        self.analyze_composite_effort()
+        self.create_composite_effort(off_def)
+        self.analyze_composite_effort(off_def)
 
         # Save data
         os.makedirs(output_dir, exist_ok=True)
-        output_path = os.path.join(output_dir, 'df_stage1_effort.csv')
+        output_path = os.path.join(output_dir, f'df_{off_def}_stage1_effort.csv')
         self.X.to_csv(output_path, index=False)
 
         return self.X
@@ -250,8 +251,8 @@ if __name__=='__main__':
     comp_eff = CompositeEffort(X=X, y=y)
     model = comp_eff.estimate_stage1_model()
 
-    output_dir = os.path.join(DATA_DIR, 'stage1_effort')
-    df_stage1_effort = comp_eff.estimate_composite_effort(output_dir=output_dir)
+    #output_dir = os.path.join(DATA_DIR, 'stage1_effort')
+    #df_stage1_effort = comp_eff.estimate_composite_effort(output_dir=output_dir)
 
     print(f"Model: {model}")
-    print(df_stage1_effort.head())
+    #print(df_stage1_effort.head())
