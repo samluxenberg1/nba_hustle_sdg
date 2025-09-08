@@ -1,11 +1,12 @@
 import os
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Literal
 import logging
 import time
 from datetime import datetime
 import pandas as pd
 from nba_api.stats.endpoints.leaguegamelog import LeagueGameLog
 from nba_api.stats.endpoints.hustlestatsboxscore import HustleStatsBoxScore
+from nba_api.stats.endpoints.boxscorefourfactorsv2 import BoxScoreFourFactorsV2
 from nba_api.stats.library.parameters import (
     Direction,
     LeagueID,
@@ -62,12 +63,12 @@ class ExtractData:
 
         return df_logs
 
-    def get_processed_game_ids(self, output_dir: str) -> set:
+    def get_processed_game_ids(self, nba_data_type: Literal['hustle','four_factors'], output_dir: str) -> set:
         """Get list of game IDs that have already been processed"""
         processed_ids = set()
         
         # Check all existing chunk files
-        chunk_files = [f for f in os.listdir(output_dir) if f.startswith('df_hustle_chunk_') and f.endswith('.csv')]
+        chunk_files = [f for f in os.listdir(output_dir) if f.startswith(f'df_{nba_data_type}_chunk_') and f.endswith('.csv')]
         
         for chunk_file in chunk_files:
             chunk_path = os.path.join(output_dir, chunk_file)
@@ -84,16 +85,20 @@ class ExtractData:
         
         return processed_ids
     
-    def save_chunk(self, chunk_data: List, chunk_num: int, output_dir: str) -> None:
-        """Save a chunk of hustle stats data"""
+    def save_chunk(self, nba_data_type: Literal['hustle','four_factors'], chunk_data: List, chunk_num: int, output_dir: str) -> None:
+        """Save a chunk of nba data"""
         if not chunk_data:
             return
             
         try:
-            df_list = [result.get_data_frames()[2] for result in chunk_data]
+            if nba_data_type == 'hustle':
+                df_idx = 2
+            else:
+                df_idx = 1
+            df_list = [result.get_data_frames()[df_idx] for result in chunk_data]
             df_chunk = pd.concat(df_list, ignore_index=True)
             
-            chunk_filename = f'df_hustle_chunk_{chunk_num:04d}.csv'
+            chunk_filename = f'df_{nba_data_type}_chunk_{chunk_num:04d}.csv'
             chunk_path = os.path.join(output_dir, chunk_filename)
             
             df_chunk.to_csv(chunk_path, index=False)
@@ -102,9 +107,9 @@ class ExtractData:
         except Exception as e:
             logger.error(f"Error saving chunk {chunk_num}: {e}")
 
-    def consolidate_chunks(self, output_dir: str) -> pd.DataFrame:
+    def consolidate_chunks(self, nba_data_type: Literal['hustle','four_factors'], output_dir: str) -> pd.DataFrame:
         """Consolidate all chunk files into a single DataFrame and save final CSV"""
-        chunk_files = [f for f in os.listdir(output_dir) if f.startswith('df_hustle_chunk_') and f.endswith('.csv')]
+        chunk_files = [f for f in os.listdir(output_dir) if f.startswith(f'df_{nba_data_type}_chunk_') and f.endswith('.csv')]
         chunk_files.sort()  # Ensure consistent order
         
         if not chunk_files:
@@ -133,20 +138,20 @@ class ExtractData:
                 logger.info(f"Removed {initial_count - final_count} duplicate records")
             
             # Save consolidated file
-            consolidated_path = os.path.join(output_dir, 'df_hustle_consolidated.csv')
+            consolidated_path = os.path.join(output_dir, f'df_{nba_data_type}_consolidated.csv')
             df_consolidated.to_csv(consolidated_path, index=False)
-            logger.info(f"Saved consolidated file with {len(df_consolidated)} records to df_hustle_consolidated.csv")
+            logger.info(f"Saved consolidated file with {len(df_consolidated)} records to df_{nba_data_type}_consolidated.csv")
             
             return df_consolidated
         
         return pd.DataFrame()
 
-    def fetch_hustle_stats(self, output_dir: str, chunk_size: int = 50) -> pd.DataFrame:
+    def fetch_nba_stats(self, nba_data_type: Literal['hustle','four_factors'], output_dir: str, chunk_size: int = 50) -> pd.DataFrame:
         """Fetch hustle stats in chunks and save progress"""
         os.makedirs(output_dir, exist_ok=True)
         
         # Get already processed game IDs
-        processed_ids = self.get_processed_game_ids(output_dir)
+        processed_ids = self.get_processed_game_ids(nba_data_type,output_dir)
     
         # Filter out already processed games
         remaining_game_ids = [gid for gid in self.game_ids if gid not in processed_ids]
@@ -155,11 +160,11 @@ class ExtractData:
         
         if not remaining_game_ids:
             logger.info("All games already processed. Consolidating existing chunks...")
-            return self.consolidate_chunks(output_dir)
+            return self.consolidate_chunks(nba_data_type, output_dir)
         
         results = []
         failed_games = []
-        chunk_num = len([f for f in os.listdir(output_dir) if f.startswith('df_hustle_chunk_')]) + 1
+        chunk_num = len([f for f in os.listdir(output_dir) if f.startswith(f'df_{nba_data_type}_chunk_')]) + 1
         
         for i, game_id in enumerate(remaining_game_ids):
             try:
@@ -171,12 +176,16 @@ class ExtractData:
                     time.sleep(1.5)  # 1.5 second delay
                 
                 # Try the request
-                hustle_stats = HustleStatsBoxScore(game_id)
-                results.append(hustle_stats)
+                if nba_data_type == 'hustle':
+                    nba_stats = HustleStatsBoxScore(game_id)
+                else: 
+                    nba_stats = BoxScoreFourFactorsV2(game_id)
+                
+                results.append(nba_stats)
                 
                 # Save chunk when we reach chunk_size
                 if len(results) >= chunk_size:
-                    self.save_chunk(results, chunk_num, output_dir)
+                    self.save_chunk(nba_data_type,results, chunk_num, output_dir)
                     results = []  # Reset for next chunk
                     chunk_num += 1
                 
@@ -186,13 +195,13 @@ class ExtractData:
                 
                 # Still save chunk if we have data, even with some failures
                 if len(results) >= chunk_size:
-                    self.save_chunk(results, chunk_num, output_dir)
+                    self.save_chunk(nba_data_type, results, chunk_num, output_dir)
                     results = []
                     chunk_num += 1
         
         # Save any remaining results
         if results:
-            self.save_chunk(results, chunk_num, output_dir)
+            self.save_chunk(nba_data_type, results, chunk_num, output_dir)
         
         # Retry failed games with longer delays
         if failed_games:
@@ -202,14 +211,18 @@ class ExtractData:
             for game_id in failed_games:
                 try:
                     time.sleep(5)  # Longer delay for retries
-                    hustle_stats = HustleStatsBoxScore(game_id)
-                    retry_results.append(hustle_stats)
+                    if nba_data_type == 'hustle':
+                        nba_stats = HustleStatsBoxScore(game_id)
+                    else:
+                        nba_stats = BoxScoreFourFactorsV2(game_id)
+                    
+                    retry_results.append(nba_stats)
                     logger.info(f"Successfully retried game {game_id}")
                     
                     # Save retry chunks too
                     if len(retry_results) >= chunk_size:
                         chunk_num += 1
-                        self.save_chunk(retry_results, chunk_num, output_dir)
+                        self.save_chunk(nba_data_type, retry_results, chunk_num, output_dir)
                         retry_results = []
                         
                 except Exception as e:
@@ -218,10 +231,10 @@ class ExtractData:
             # Save any remaining retry results
             if retry_results:
                 chunk_num += 1
-                self.save_chunk(retry_results, chunk_num, output_dir)
+                self.save_chunk(nba_data_type, retry_results, chunk_num, output_dir)
 
         # Consolidate all chunks into final DataFrame
-        return self.consolidate_chunks(output_dir)
+        return self.consolidate_chunks(nba_data_type, output_dir)
     
     # def fetch_hustle_stats(self) -> pd.DataFrame:
     #     results = []
@@ -276,34 +289,40 @@ class ExtractData:
         
         return df_logs
     
-    def extract_hustle_stats(self, output_dir: str, chunk_size: int = 50) -> pd.DataFrame:
+    def extract_nba_stats(self, nba_data_type: Literal['hustle','four_factors'], output_dir: str, chunk_size: int = 50) -> pd.DataFrame:
         """Extract hustle stats with chunked saving"""
-        # Fetch Hustle Stats with chunking
-        df_hustle = self.fetch_hustle_stats(output_dir, chunk_size)
+        # Fetch NBA Stats with chunking
+        df_stats = self.fetch_nba_stats(nba_data_type, output_dir, chunk_size)
         
-        if len(df_hustle) == 0:
-            logging.warning(f"No hustle data fetched.")
+        if len(df_stats) == 0:
+            logging.warning(f"No {nba_data_type} data fetched.")
             return pd.DataFrame()
         else:
-            logging.info(f"Total hustle stats records: {len(df_hustle)}")
+            logging.info(f"Total {nba_data_type} stats records: {len(df_stats)}")
 
-        return df_hustle
+        return df_stats
 
 
 if __name__ == '__main__': 
-    OUTPUT_DIR = 'data'
+    OUTPUT_DIR = 'data/raw_data'
     SEASON_LIST = ['2022-23','2023-24','2024-25']
     CHUNK_SIZE = 25  # Adjust chunk size as needed
 
     ed = ExtractData(season_list=SEASON_LIST)
     df_logs = ed.extract_logs_data(output_dir=OUTPUT_DIR)
-    df_hustle = ed.extract_hustle_stats(output_dir=OUTPUT_DIR, chunk_size=CHUNK_SIZE)
+    df_hustle = ed.extract_nba_stats(nba_data_type='hustle', output_dir=OUTPUT_DIR, chunk_size=CHUNK_SIZE)
+    df_four_factors = ed.extract_nba_stats(nba_data_type='four_factors', output_dir=OUTPUT_DIR, chunk_size=CHUNK_SIZE)
     
     print("="*50)
     print("="*20 + " df_logs " + "="*21)
     print("="*50)
     print(df_logs.head())
     print("="*50)
-    print("="*20 + " df_hustle " + "="*21)
+    print("="*20 + " df_hustle " + "="*20)
     print("="*50)
     print(df_hustle.head())
+    print("="*50)
+    print("="*20 + " df_four_factors " + "="*20)
+    print("="*50)
+    print(df_four_factors.head())
+

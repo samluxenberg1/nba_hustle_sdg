@@ -28,3 +28,20 @@ hustle_stats = [
     'OFF_LOOSE_BALLS_RECOVERED',
     'CONTESTED_SHOTS_3PT'
 ]
+
+four_factors_stats = [
+    'EFG_PCT',
+    'FTA_RATE',
+    'TM_TOV_PCT',
+    'OREB_PCT'
+]
+
+home_away_id_cols = [
+    'SEASON_ID',
+    'GAME_ID',
+    'GAME_DATE',
+    'HOME_TEAM_ID',
+    'AWAY_TEAM_ID',
+    'HOME_TEAM_ABBREVIATION',
+    'AWAY_TEAM_ABBREVIATION'
+]
