@@ -10,7 +10,13 @@ import logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
-def prep_off_def_model_data(df_train: pd.DataFrame, features: List[str], target_name: str, effort_type: Literal['off','def','net']):
+def prep_off_def_model_data(
+        df_train: pd.DataFrame, 
+        features: List[str], 
+        target_name: str, 
+        effort_type: Literal['off','def','net']
+    ) -> CompositeEffort:
+    """Prepare data for input into offensive, defensive rating models"""
 
     home_features = [f"HOME_{stat}" for stat in features] 
     away_features = [f"AWAY_{stat}" for stat in features]
@@ -36,7 +42,12 @@ def prep_off_def_model_data(df_train: pd.DataFrame, features: List[str], target_
     
     return CompositeEffort(X=X, y=y, effort_type=effort_type, id_cols=ids)
 
-def prep_net_model_data(df_train: pd.DataFrame, off_effort: pd.DataFrame, def_effort: pd.DataFrame):
+def prep_net_model_data(
+        df_train: pd.DataFrame, 
+        off_effort: pd.DataFrame, 
+        def_effort: pd.DataFrame
+    ) -> CompositeEffort:
+    """Prepare data for input into net rating model"""
     # Define target
     y_off_home = df_train['EST_HOME_ORtg']
     y_def_home = df_train['EST_HOME_DRtg'] # HOME_DRtg = AWAY_ORtg
