@@ -1,5 +1,9 @@
 import os
 import pandas as pd
+import statsmodels.api as sm
+import matplotlib.pyplot as plt
+import seaborn as sns
+
 from src.constants import four_factors_stats
 
 def team_schedule(df: pd.DataFrame) -> pd.DataFrame:
@@ -18,7 +22,7 @@ def team_schedule(df: pd.DataFrame) -> pd.DataFrame:
             'AWAY_TEAM':'OPP_TEAM',
             'HOME_EFG_PCT':'TEAM_EFG_PCT',
             'AWAY_EFG_PCT':'OPP_EFG_PCT',
-            'HOME_TM_TOV_PCT': 'TEAM_TOV_PCT',
+            'HOME_TM_TOV_PCT': 'TEAM_TM_TOV_PCT',
             'AWAY_TM_TOV_PCT':'OPP_TOV_PCT',
             'HOME_FTA_RATE':'TEAM_FTA_RATE',
             'AWAY_FTA_RATE':'OPP_FTA_RATE',
@@ -38,7 +42,7 @@ def team_schedule(df: pd.DataFrame) -> pd.DataFrame:
             'HOME_EFG_PCT':'OPP_EFG_PCT',
             'AWAY_EFG_PCT':'TEAM_EFG_PCT',
             'HOME_TM_TOV_PCT': 'OPP_TOV_PCT',
-            'AWAY_TM_TOV_PCT':'TEAM_TOV_PCT',
+            'AWAY_TM_TOV_PCT':'TEAM_TM_TOV_PCT',
             'HOME_FTA_RATE':'OPP_FTA_RATE',
             'AWAY_FTA_RATE':'TEAM_FTA_RATE',
             'HOME_OREB_PCT':'OPP_OREB_PCT',
@@ -123,8 +127,84 @@ def run_stage2(split_date: str, window: int):
             .reset_index(drop=True)
         )
 
-    # Join back to transformed data: 1. join by home, 2. join by away ???
-    df_trans = df_trans.merge(
-        df_team_sched
+    # Join back to transformed data: 1. join by home, 2. join by away 
+    # Only retain necessary columns
+    df_team_sched = df_team_sched[['GAME_ID','TEAM','OPP_TEAM',
+                                   f'TEAM_AVG{window}_NET_COMPOSITE_EFFORT',
+                                   f'TEAM_AVG{window}_EFG_PCT',f'TEAM_AVG{window}_FTA_RATE',
+                                   f'TEAM_AVG{window}_TM_TOV_PCT',f'TEAM_AVG{window}_OREB_PCT']]
+    df_train = (
+        df_train
+        .merge(
+        df_team_sched, 
+        how='left', 
+        left_on=['GAME_ID','HOME_TEAM'],
+        right_on=['GAME_ID','TEAM'])
+        .rename(columns={f'TEAM_AVG{window}_NET_COMPOSITE_EFFORT':f'HOME_AVG{window}_NET_COMPOSITE_EFFORT',
+                        f'TEAM_AVG{window}_EFG_PCT':f'HOME_AVG{window}_EFG_PCT',
+                        f'TEAM_AVG{window}_FTA_RATE':f'HOME_AVG{window}_FTA_RATE',
+                        f'TEAM_AVG{window}_TM_TOV_PCT':f'HOME_AVG{window}_TM_TOV_PCT',
+                        f'TEAM_AVG{window}_OREB_PCT':f'HOME_AVG{window}_OREB_PCT'})
+        .drop(['TEAM','OPP_TEAM'],axis=1)
     )
+    df_train = (
+        df_train
+        .merge(
+            df_team_sched,
+            how='left',
+            left_on=['GAME_ID','AWAY_TEAM'],
+            right_on=['GAME_ID','TEAM']
+        )
+        .rename(columns={f'TEAM_AVG{window}_NET_COMPOSITE_EFFORT':f'AWAY_AVG{window}_NET_COMPOSITE_EFFORT',
+                        f'TEAM_AVG{window}_EFG_PCT':f'AWAY_AVG{window}_EFG_PCT',
+                        f'TEAM_AVG{window}_FTA_RATE':f'AWAY_AVG{window}_FTA_RATE',
+                        f'TEAM_AVG{window}_TM_TOV_PCT':f'AWAY_AVG{window}_TM_TOV_PCT',
+                        f'TEAM_AVG{window}_OREB_PCT':f'AWAY_AVG{window}_OREB_PCT'})
+        .drop(['TEAM','OPP_TEAM'],axis=1)
+        
+    )
+    df_train[f'AVG{window}_NET_COMPOSITE_EFFORT_DIFF'] = df_train[f'HOME_AVG{window}_NET_COMPOSITE_EFFORT']-df_train[f'AWAY_AVG{window}_NET_COMPOSITE_EFFORT']
+    df_train[f'AVG{window}_EFG_PCT_DIFF'] = df_train[f'HOME_AVG{window}_EFG_PCT']-df_train[f'AWAY_AVG{window}_EFG_PCT']
+    df_train[f'AVG{window}_FTA_RATE_DIFF'] = df_train[f'HOME_AVG{window}_FTA_RATE']-df_train[f'AWAY_AVG{window}_FTA_RATE']
+    df_train[f'AVG{window}_TM_TOV_PCT_DIFF'] = df_train[f'HOME_AVG{window}_TM_TOV_PCT']-df_train[f'AWAY_AVG{window}_TM_TOV_PCT']
+    df_train[f'AVG{window}_OREB_PCT_DIFF'] = df_train[f'HOME_AVG{window}_OREB_PCT']-df_train[f'AWAY_AVG{window}_OREB_PCT']
 
+    df_train.fillna(0, inplace=True)
+
+    # Run model
+    y = df_train['EST_HOME_NRtg']
+    X = df_train[[f'AVG{window}_EFG_PCT_DIFF',f'AVG{window}_FTA_RATE_DIFF',f'AVG{window}_TM_TOV_PCT_DIFF',f'AVG{window}_OREB_PCT_DIFF',f'AVG{window}_NET_COMPOSITE_EFFORT_DIFF']]
+    X1 = sm.add_constant(X)
+    reg_stage2 = sm.OLS(endog=y, exog=X1).fit()
+    print(reg_stage2.summary())
+
+    # Plots/Diagnostics
+    df_c = pd.concat([y,X],axis=1,ignore_index=True)
+    df_c.columns=['EST_HOME_NRtg']+[f'AVG{window}_EFG_PCT_DIFF',f'AVG{window}_FTA_RATE_DIFF',f'AVG{window}_TM_TOV_PCT_DIFF',f'AVG{window}_OREB_PCT_DIFF',f'AVG{window}_NET_COMPOSITE_EFFORT_DIFF']
+    print(df_c.describe(percentiles=[.001,.01,.05,.1,.2,.25,.3,.4,.5,.6,.7,.75,.8,.9,.95,.99,.999]))
+    sns.pairplot(df_c)
+    plt.show()
+    yhat = reg_stage2.fittedvalues
+    res = reg_stage2.resid
+    sns.scatterplot(x=yhat, y=res)
+    plt.axhline(y=0, linestyle='dashed',color='red')
+    plt.show()
+    sm.qqplot(res, line='q')
+    plt.show()
+    plot_data = pd.DataFrame({'y_true': y, 'y_pred': yhat})
+    sns.regplot(
+            x='y_true', y='y_pred', data=plot_data, 
+            line_kws={'color': 'red', 'label':'Linear Model'}, 
+            scatter_kws={'color': 'tab:blue','alpha':.25}
+        )
+    sns.regplot(
+            x='y_true', y='y_pred', data=plot_data, 
+            lowess=True,
+            line_kws={'color': 'green', 'label':'Lowess'}, 
+            scatter_kws={'color': 'tab:blue','alpha':.25}
+        )
+    plt.legend(loc='best')
+    plt.show()
+
+if __name__=='__main__':
+    run_stage2(split_date='2024-10-22',window=10)

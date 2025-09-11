@@ -71,7 +71,7 @@ def prep_net_model_data(
     return CompositeEffort(X=X_net[X_cols], y=y_net, effort_type='net', id_cols=ids)
 
 
-def run_stage1():
+def run_stage1(split_date: str ='2024-10-22'):
     # Read in data
     logger.info("Read in data...")
     DATA_DIR = 'data/'
@@ -93,7 +93,6 @@ def run_stage1():
     df_trans['GAME_DATE'] = pd.to_datetime(df_trans['GAME_DATE'])
 
     # Split
-    split_date = '2024-10-22'
     logger.info(f"Split transformed data on {split_date}")
     df_trans_score = df_trans[df_trans['GAME_DATE']>=split_date]
     df_trans_train = df_trans[df_trans['GAME_DATE']<split_date]
