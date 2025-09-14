@@ -7,7 +7,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 class RegressionDiagnostics:
-    def plot_fit_vs_actual(self, y_true, y_pred, ax, target):
+    def plot_fit_vs_actual(self, y_true, y_pred, ax, target_name):
         """Plot fitted vs actual values"""
         plot_data = pd.DataFrame({'y_true': y_true, 'y_pred': y_pred})
 
@@ -24,13 +24,13 @@ class RegressionDiagnostics:
             scatter_kws={'color':'blue', 'alpha':0}, 
             ax=ax
         )
-        ax.set_ylabel(f"Est. {target}")
-        ax.set_xlabel(f"Actual {target}")
+        ax.set_ylabel(f"Est. {target_name}")
+        ax.set_xlabel(f"Actual {target_name}")
         ax.legend(loc='best')
 
     def plot_residuals_vs_fit(self, y_true, y_pred, target, ax):
         """Plot residuals vs predicted values"""
-        residuals = y_true.flatten()-y_pred.flatten()
+        residuals = y_true-y_pred
         sns.scatterplot(
             x=y_pred,
             y=residuals,
@@ -44,7 +44,7 @@ class RegressionDiagnostics:
         ax.set_xlabel(f'Est. {target}')
 
     def plot_qq(self,y_true, y_pred, ax):
-        residuals = y_true.flatten()-y_pred.flatten()
+        residuals = y_true-y_pred
         sm.qqplot(residuals, line='q', ax=ax)
 
     def plot_error_analysis(self, y_pred, y_true, axes):
@@ -56,7 +56,7 @@ class RegressionDiagnostics:
         self._plot_binned_statistics(axes, stats_dict)
 
     def _create_results_dataframe(self, y_pred, y_true):
-        residuals = y_true.flatten()-y_pred.flatten()
+        residuals = y_true-y_pred
         df_res = pd.DataFrame(
             {
                 'yhat': y_pred,
@@ -120,19 +120,19 @@ class RegressionDiagnostics:
         )
         axes[2].legend(loc='best')
 
-    def create_diagnostic_plots(self,model_name: str, target: str, y_true, y_pred, save_figs=False):
+    def create_diagnostic_plots(self,model_name: str, target_name: str, y_true, y_pred, save_figs=False):
         """Produce Diagnostic Plots"""
         fig, ax = plt.subplots(2,3, figsize=(20,10))
         plt.suptitle(f'{model_name} Diagnositic Plots')
 
-        self.plot_fit_vs_actual(y_true=y_true, y_pred=y_pred, ax=ax[0,0], target=target)
-        self.plot_residuals_vs_fit(y_true=y_true, y_pred=y_pred, target=target, ax=ax[0,1])
+        self.plot_fit_vs_actual(y_true=y_true, y_pred=y_pred, ax=ax[0,0], target_name=target_name)
+        self.plot_residuals_vs_fit(y_true=y_true, y_pred=y_pred, target=target_name, ax=ax[0,1])
         self.plot_qq(y_true=y_true, y_pred=y_pred,ax=ax[0,2])
 
         self.plot_error_analysis(y_true=y_true, y_pred=y_pred, axes=ax[1,:])
 
         if save_figs:
             os.makedirs('figures',exist_ok=True)
-            plt.savefig(f"figures/{model_name}_model_diagnositic_plots.png")
+            plt.savefig(f"figures/{model_name.replace(' ','_')}_model_diagnositic_plots.png")
 
         plt.show()

@@ -3,7 +3,8 @@ from typing import List, Literal
 import pandas as pd
 import numpy as np
 
-from src.steps.model.create_effort import CompositeEffort
+from src.steps.model.model_stage1 import ModelStage1
+#from src.steps.model.create_effort import CompositeEffort
 from src.constants import hustle_stats, home_away_id_cols
 
 import logging 
@@ -14,8 +15,9 @@ def prep_off_def_model_data(
         df_train: pd.DataFrame, 
         features: List[str], 
         target_name: str, 
-        effort_type: Literal['off','def','net']
-    ) -> CompositeEffort:
+        effort_type: Literal['off','def','net'],
+        model_name: str
+    ) -> ModelStage1:
     """Prepare data for input into offensive, defensive rating models"""
 
     home_features = [f"HOME_{stat}" for stat in features] 
@@ -40,13 +42,21 @@ def prep_off_def_model_data(
     X = pd.concat([X_home, X_away], ignore_index=True)
     y = pd.concat([y_home, y_away], ignore_index=True)
     
-    return CompositeEffort(X=X, y=y, effort_type=effort_type, id_cols=ids)
+    return ModelStage1(
+        X=X, 
+        y=y, 
+        effort_type=effort_type, 
+        id_cols=ids, 
+        model_name=model_name, 
+        target_name=target_name
+    )
 
 def prep_net_model_data(
         df_train: pd.DataFrame, 
         off_effort: pd.DataFrame, 
-        def_effort: pd.DataFrame
-    ) -> CompositeEffort:
+        def_effort: pd.DataFrame,
+        model_name: str
+    ) -> ModelStage1:
     """Prepare data for input into net rating model"""
     # Define target
     y_off_home = df_train['EST_HOME_ORtg']
@@ -68,7 +78,14 @@ def prep_net_model_data(
     )
     X_cols = ids + ['OFF_COMPOSITE_EFFORT','DEF_COMPOSITE_EFFORT']
 
-    return CompositeEffort(X=X_net[X_cols], y=y_net, effort_type='net', id_cols=ids)
+    return ModelStage1(
+        X=X_net[X_cols], 
+        y=y_net, 
+        effort_type='net', 
+        id_cols=ids,
+        model_name=model_name,
+        target_name='EST_NRtg'
+    )
 
 
 def run_stage1(split_date: str ='2024-10-22'):
@@ -103,10 +120,16 @@ def run_stage1(split_date: str ='2024-10-22'):
         df_train=df_trans_train, 
         features=off_features, 
         target_name='ORtg',
-        effort_type='off'
+        effort_type='off',
+        model_name='Offensive Rating'
     )
-    off_stage1 = comp_eff_off.estimate_stage1_model()
-    off_stage1_effort = comp_eff_off.estimate_composite_effort(output_dir=output_dir)
+    off_stage1 = comp_eff_off.run_stage1_model(
+        output_dir=output_dir,
+        save_figs=False,
+        print_output=True,
+        create_plots=False
+    )
+    
     logger.info("Offensive effort complete.")
 
     # Defensive Rating Model
@@ -115,10 +138,16 @@ def run_stage1(split_date: str ='2024-10-22'):
         df_train=df_trans_train, 
         features=def_features, 
         target_name='DRtg',
-        effort_type='def'
+        effort_type='def',
+        model_name='Defensive Rating'
     )
-    def_stage1 = comp_eff_def.estimate_stage1_model()
-    def_stage1_effort = comp_eff_def.estimate_composite_effort(output_dir=output_dir)
+    def_stage1 = comp_eff_def.run_stage1_model(
+        output_dir=output_dir,
+        save_figs=False,
+        print_output=True,
+        create_plots=False
+    )
+    
     logger.info("Defensive effort complete.")
 
     # Net Rating Model
@@ -126,11 +155,19 @@ def run_stage1(split_date: str ='2024-10-22'):
     comp_eff_net = prep_net_model_data(
         df_train=df_trans_train,
         off_effort=comp_eff_off.X_with_ids,
-        def_effort=comp_eff_def.X_with_ids
+        def_effort=comp_eff_def.X_with_ids,
+        model_name='Net Rating'
     )
-    net_stage1 = comp_eff_net.estimate_stage1_model()
-    net_stage1_effort = comp_eff_net.estimate_composite_effort(output_dir=output_dir)
+    net_stage1 = comp_eff_net.run_stage1_model(
+        output_dir=output_dir,
+        save_figs=False,
+        print_output=True,
+        create_plots=False
+    )
+    
     logger.info("Net effort complete.")
 
 if __name__=='__main__':
-    run_stage1()
+    split_date_list = ['2023-10-22', '2024-01-01','2024-10-22']
+    for date in split_date_list:
+        run_stage1(split_date=date)
