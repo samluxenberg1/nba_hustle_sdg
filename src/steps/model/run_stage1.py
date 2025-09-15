@@ -4,7 +4,6 @@ import pandas as pd
 import numpy as np
 
 from src.steps.model.model_stage1 import ModelStage1
-#from src.steps.model.create_effort import CompositeEffort
 from src.constants import hustle_stats, home_away_id_cols
 
 import logging 
