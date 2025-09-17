@@ -198,7 +198,7 @@ class TransformStage2:
         self.df_train[f'AVG{self.hist_avg_window}_TM_TOV_PCT_DIFF'] = self.df_train[f'HOME_AVG{self.hist_avg_window}_TM_TOV_PCT']-self.df_train[f'AWAY_AVG{self.hist_avg_window}_TM_TOV_PCT']
         self.df_train[f'AVG{self.hist_avg_window}_OREB_PCT_DIFF'] = self.df_train[f'HOME_AVG{self.hist_avg_window}_OREB_PCT']-self.df_train[f'AWAY_AVG{self.hist_avg_window}_OREB_PCT']
 
-        self.df_train.fillna(0, inplace=True)# Only retain necessary columns
+        self.df_train.fillna(0, inplace=True)
 
     def run_transform(self):
         # Step 1 - Join Stage 1 Results to Stage 1 Transformed Data

@@ -37,7 +37,6 @@ class ModelStage1(RegressionDiagnostics):
 
         self.y = y
         self.effort_type = effort_type
-        self.X_model: pd.DataFrame = pd.DataFrame()
         self.reg_stage1: Optional[RegressionResultsWrapper] = None
         self.model_name = model_name
         self.target_name=target_name
@@ -109,7 +108,7 @@ class ModelStage1(RegressionDiagnostics):
         logger.info(f"Spearman Correlation: {spearman_stat: .3f}, P-value: {spearman_pval: .5f}")
         logger.info(f"Kendall's Tau Correlation: {kendall_stat: .3f}, P-value: {kendall_pval: .5f}")
 
-    def run_stage1_model(self, output_dir: str, save_figs=False, print_output=False, create_plots=False):
+    def run_stage1_model(self, output_dir: str, save_figs: bool =False, print_output: bool =False, create_plots: bool =False):
         """Run Stage 1 Model"""
         # Fit model
         model = self.fit_stage1_model()
