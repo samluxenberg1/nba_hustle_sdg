@@ -95,6 +95,9 @@ class TransformStage2:
             right_on=['GAME_ID','TEAM_ID'],
             suffixes=('_HOME','_AWAY')
         )
+
+        # Drop TEAM_ID_HOME and TEAM_ID_AWAY to avoid redundancy
+        self.df_transformed.drop(['TEAM_ID_HOME','TEAM_ID_AWAY'], axis=1, inplace=True)
     
     def clean_data(self):
         """Clean Columns and Split Data"""

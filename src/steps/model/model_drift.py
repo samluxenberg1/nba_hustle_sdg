@@ -16,14 +16,10 @@ df_trans['GAME_DATE_dt'] = pd.to_datetime(df_trans['GAME_DATE'])
 df_trans.sort_values('GAME_DATE_dt', inplace=True)
 
 dates = df_trans[df_trans['GAME_DATE_dt']>=TEST_DATE]['GAME_DATE'].drop_duplicates()
-#date_list = list(set(game_dates))
-print(f"First 10 dates... {dates[:10]}")
-print("="*50)
-print(f"Min Date: {dates.values[0]}, Max Date: {dates.values[-1]}")
 
 WINDOW = 10
 
-for game_date in dates[:5]:
+for game_date in dates[:3]:
 
     print(f"Date: {game_date}")
     # Estimate stage 1 effort with all latest data
