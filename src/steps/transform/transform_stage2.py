@@ -3,14 +3,14 @@ import pandas as pd
 from src.constants import four_factors_stats
 
 class TransformStage2:
-    def __init__(self, df_transformed: pd.DataFrame, df_stage1_results: pd.DataFrame, split_date: str, hist_avg_window: int):
+    def __init__(self, df_transformed: pd.DataFrame, df_stage1_results: pd.DataFrame, current_date: str, hist_avg_window: int):
         self.df_transformed = df_transformed
         self.df_stage1_results = df_stage1_results
-        self.split_date = split_date
+        self.current_date = current_date
         self.hist_avg_window = hist_avg_window
         self.df_team_sched = pd.DataFrame()
 
-        self.split_date = pd.to_datetime(self.split_date)
+        self.current_date = pd.to_datetime(self.current_date)
 
     @staticmethod
     def team_schedule(df: pd.DataFrame) -> pd.DataFrame:
@@ -118,12 +118,14 @@ class TransformStage2:
 
         self.df_transformed['GAME_DATE'] = pd.to_datetime(self.df_transformed['GAME_DATE'])
         
-        self.df_train = self.df_transformed[self.df_transformed['GAME_DATE'] < self.split_date].copy()
+        self.df_transformed = self.df_transformed[self.df_transformed['GAME_DATE'] <= self.current_date]
+        # self.df_train = self.df_transformed[self.df_transformed['GAME_DATE'] < self.current_date].copy()
+        # self.df_test = self.df_transformed[self.df_transformed['GAME_DATE'] == self.current_date].copy()
 
     
     def create_historical_features(self):
         """Four Factors and Effort Average"""
-        self.df_team_sched = self.team_schedule(df=self.df_train)
+        self.df_team_sched = self.team_schedule(df=self.df_transformed)
         self.df_team_sched[f'TEAM_AVG{self.hist_avg_window}_NET_COMPOSITE_EFFORT'] = (
             self.df_team_sched
             .groupby('TEAM')['TEAM_NET_COMPOSITE_EFFORT']
@@ -154,8 +156,8 @@ class TransformStage2:
             f'TEAM_AVG{self.hist_avg_window}_OREB_PCT'
         ]
         df_team_sched = self.df_team_sched[cols_to_keep]
-        self.df_train = (
-            self.df_train
+        self.df_transformed = (
+            self.df_transformed
             .merge(
             df_team_sched, 
             how='left', 
@@ -171,8 +173,8 @@ class TransformStage2:
             )
             .drop(['TEAM','OPP_TEAM'],axis=1)
         )
-        self.df_train = (
-            self.df_train
+        self.df_transformed = (
+            self.df_transformed
             .merge(
                 df_team_sched,
                 how='left',
@@ -192,13 +194,13 @@ class TransformStage2:
         )
 
         # Create differenced features
-        self.df_train[f'AVG{self.hist_avg_window}_NET_COMPOSITE_EFFORT_DIFF'] = self.df_train[f'HOME_AVG{self.hist_avg_window}_NET_COMPOSITE_EFFORT']-self.df_train[f'AWAY_AVG{self.hist_avg_window}_NET_COMPOSITE_EFFORT']
-        self.df_train[f'AVG{self.hist_avg_window}_EFG_PCT_DIFF'] = self.df_train[f'HOME_AVG{self.hist_avg_window}_EFG_PCT']-self.df_train[f'AWAY_AVG{self.hist_avg_window}_EFG_PCT']
-        self.df_train[f'AVG{self.hist_avg_window}_FTA_RATE_DIFF'] = self.df_train[f'HOME_AVG{self.hist_avg_window}_FTA_RATE']-self.df_train[f'AWAY_AVG{self.hist_avg_window}_FTA_RATE']
-        self.df_train[f'AVG{self.hist_avg_window}_TM_TOV_PCT_DIFF'] = self.df_train[f'HOME_AVG{self.hist_avg_window}_TM_TOV_PCT']-self.df_train[f'AWAY_AVG{self.hist_avg_window}_TM_TOV_PCT']
-        self.df_train[f'AVG{self.hist_avg_window}_OREB_PCT_DIFF'] = self.df_train[f'HOME_AVG{self.hist_avg_window}_OREB_PCT']-self.df_train[f'AWAY_AVG{self.hist_avg_window}_OREB_PCT']
+        self.df_transformed[f'AVG{self.hist_avg_window}_NET_COMPOSITE_EFFORT_DIFF'] = self.df_transformed[f'HOME_AVG{self.hist_avg_window}_NET_COMPOSITE_EFFORT']-self.df_transformed[f'AWAY_AVG{self.hist_avg_window}_NET_COMPOSITE_EFFORT']
+        self.df_transformed[f'AVG{self.hist_avg_window}_EFG_PCT_DIFF'] = self.df_transformed[f'HOME_AVG{self.hist_avg_window}_EFG_PCT']-self.df_transformed[f'AWAY_AVG{self.hist_avg_window}_EFG_PCT']
+        self.df_transformed[f'AVG{self.hist_avg_window}_FTA_RATE_DIFF'] = self.df_transformed[f'HOME_AVG{self.hist_avg_window}_FTA_RATE']-self.df_transformed[f'AWAY_AVG{self.hist_avg_window}_FTA_RATE']
+        self.df_transformed[f'AVG{self.hist_avg_window}_TM_TOV_PCT_DIFF'] = self.df_transformed[f'HOME_AVG{self.hist_avg_window}_TM_TOV_PCT']-self.df_transformed[f'AWAY_AVG{self.hist_avg_window}_TM_TOV_PCT']
+        self.df_transformed[f'AVG{self.hist_avg_window}_OREB_PCT_DIFF'] = self.df_transformed[f'HOME_AVG{self.hist_avg_window}_OREB_PCT']-self.df_transformed[f'AWAY_AVG{self.hist_avg_window}_OREB_PCT']
 
-        self.df_train.fillna(0, inplace=True)
+        self.df_transformed.fillna(0, inplace=True)
 
     def run_transform(self):
         # Step 1 - Join Stage 1 Results to Stage 1 Transformed Data
@@ -212,3 +214,7 @@ class TransformStage2:
 
         # Step 4 - Join historical features
         self.join_historical_features()
+
+        # Step 5 - Split data
+        self.df_train = self.df_transformed[self.df_transformed['GAME_DATE'] < self.current_date].copy()
+        self.df_test = self.df_transformed[self.df_transformed['GAME_DATE'] == self.current_date].copy()

@@ -25,7 +25,7 @@ class ModelStage2(RegressionDiagnostics):
             model_name: str, 
             target_name: str, 
             id_cols: List[str],
-            test_date: str
+            current_date: str
         ) -> None:
         self.X_train = X_train
         self.y_train = y_train
@@ -33,14 +33,18 @@ class ModelStage2(RegressionDiagnostics):
         self.reg_stage2: Optional[RegressionResultsWrapper] = None
         self.model_name = model_name
         self.target_name = target_name
-        self.test_date = test_date
+        self.current_date = current_date
         self.id_cols = id_cols
         if self.id_cols:
-            self.id_data = X_train[self.id_cols].copy() # store ID columns separately
+            self.id_data_train = X_train[self.id_cols].copy() # store ID columns separately
+            self.id_data_test = X_test[self.id_cols].copy()
             self.X_train = X_train.drop(self.id_cols, axis=1) # features for modeling
+            self.X_test = X_test.drop(self.id_cols, axis=1)
         else:
-            self.id_data = pd.DataFrame(index=X_train.index)
+            self.id_data_train = pd.DataFrame(index=X_train.index)
             self.X_train = X_train.copy()
+            self.id_data_test = pd.DataFrame(index=X_test.index)
+            self.X_test = X_test.copy()
 
     def fit_stage2_model(self) -> RegressionResultsWrapper:
         """Fit Stage 2 OLS Model"""
@@ -68,7 +72,7 @@ class ModelStage2(RegressionDiagnostics):
         print(self.reg_stage2.summary())
 
     def run_stage2_model(self, output_dir: str, save_figs: bool =False, print_output: bool =False, create_plots: bool =False):
-        """Run Stage 1 Model"""
+        """Run Stage 2 Model"""
         # Fit model
         model = self.fit_stage2_model()
 
@@ -79,7 +83,8 @@ class ModelStage2(RegressionDiagnostics):
         # Training Predictions
         y_pred_train = model.fittedvalues
         y_pred_train_df = pd.DataFrame({'y_pred_train': y_pred_train})
-        df_train = pd.concat([self.X_train, y_pred_train_df], axis=1, ignore_index=True)
+        df_train = pd.concat([self.X_train, y_pred_train_df], axis=1)
+        df_train = pd.concat([self.id_data_train, df_train], axis=1)
         logger.info(f"Train RMSE: {rmse(y_true=self.y_train, y_pred=y_pred_train): .3f}")
 
         # Create OLS diagnostic plots
@@ -94,15 +99,16 @@ class ModelStage2(RegressionDiagnostics):
 
         # Predict upcoming games
         y_pred_test_df = pd.DataFrame({'y_pred_test': self.predict_stage2_model()})
-        df_test = pd.concat([self.X_test, y_pred_test_df], axis=1, ignore_index=True)
-
+        logger.info("Current date prediction complete.")
+        df_test = pd.concat([self.X_test, y_pred_test_df], axis=1)
+        df_test = pd.concat([self.id_data_test, df_test], axis=1)
 
         # Save
-        test_date_fmt = datetime.strftime(datetime.strptime(self.test_date,"%Y-%m-%d"),"%Y%m%d")
+        current_date_fmt = datetime.strftime(datetime.strptime(self.current_date,"%Y-%m-%d"),"%Y%m%d")
         os.makedirs(output_dir, exist_ok=True)
-        train_output_path = os.path.join(output_dir, f'df_train_stage2_effort_{test_date_fmt}.csv')
-        test_output_path = os.path.join(output_dir, f'df_test_stage2_effort_{test_date_fmt}')
+        train_output_path = os.path.join(output_dir, f'df_train_stage2_effort_{current_date_fmt}.csv')
+        test_output_path = os.path.join(output_dir, f'df_test_stage2_effort_{current_date_fmt}.csv')
 
         df_test.to_csv(test_output_path, index=False)
         df_train.to_csv(train_output_path, index=False)
-        #self.X_with_ids.to_csv(output_path, index=False)
+    

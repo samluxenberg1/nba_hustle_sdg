@@ -87,13 +87,14 @@ def prep_net_model_data(
     )
 
 
-def run_stage1(split_date: str ='2024-10-22'):
+def run_stage1(current_date: str ='2024-10-22', save_figs: bool = False, print_output: bool = False, create_plots: bool = False):
     # Read in data
     logger.info("Read in data...")
     DATA_DIR = 'data/'
     input_path = os.path.join(DATA_DIR, 'transformed_data', 'df_transformed.csv')
     output_dir = os.path.join(DATA_DIR, 'stage1_effort')
     df_trans = pd.read_csv(input_path)
+    logger.info(f"df_trans: {df_trans.shape}")
 
     # Define available reatures
     features_to_exclude = ['CONTESTED_SHOTS','BOX_OUTS', 'SCREEN_AST_PTS', 'BOX_OUT_PLAYER_TEAM_REBS', 'LOOSE_BALLS_RECOVERED','BOX_OUT_PLAYER_REBS']
@@ -105,13 +106,14 @@ def run_stage1(split_date: str ='2024-10-22'):
     ] 
 
     # Convert game date to datetime to split
-    logger.info("Conver GAME_DATE to datetime...")
+    logger.info("Convert GAME_DATE to datetime...")
     df_trans['GAME_DATE'] = pd.to_datetime(df_trans['GAME_DATE'])
 
     # Split
-    logger.info(f"Split transformed data on {split_date}")
-    df_trans_score = df_trans[df_trans['GAME_DATE']>=split_date]
-    df_trans_train = df_trans[df_trans['GAME_DATE']<split_date]
+    logger.info(f"Split transformed data on {current_date}")
+    #df_trans_score = df_trans[df_trans['GAME_DATE']==current_date]
+    df_trans_train = df_trans[df_trans['GAME_DATE']<current_date]
+    logger.info(f"df_trans_train: {df_trans_train.shape}")
 
     # Offensive Rating Model
     logger.info("Estimating offensive effort...")
@@ -124,9 +126,9 @@ def run_stage1(split_date: str ='2024-10-22'):
     )
     off_stage1 = comp_eff_off.run_stage1_model(
         output_dir=output_dir,
-        save_figs=False,
-        print_output=True,
-        create_plots=False
+        save_figs=save_figs,
+        print_output=print_output,
+        create_plots=create_plots
     )
     
     logger.info("Offensive effort complete.")
@@ -142,9 +144,9 @@ def run_stage1(split_date: str ='2024-10-22'):
     )
     def_stage1 = comp_eff_def.run_stage1_model(
         output_dir=output_dir,
-        save_figs=False,
-        print_output=True,
-        create_plots=False
+        save_figs=save_figs,
+        print_output=print_output,
+        create_plots=create_plots
     )
     
     logger.info("Defensive effort complete.")
@@ -159,14 +161,14 @@ def run_stage1(split_date: str ='2024-10-22'):
     )
     net_stage1 = comp_eff_net.run_stage1_model(
         output_dir=output_dir,
-        save_figs=False,
-        print_output=True,
-        create_plots=False
+        save_figs=save_figs,
+        print_output=print_output,
+        create_plots=create_plots
     )
     
     logger.info("Net effort complete.")
 
 if __name__=='__main__':
-    split_date_list = ['2023-10-22', '2024-01-01','2024-10-22']
-    for date in split_date_list:
-        run_stage1(split_date=date)
+    current_date_list = ['2023-10-22', '2024-01-01','2024-10-22']
+    for date in current_date_list:
+        run_stage1(current_date=date)
