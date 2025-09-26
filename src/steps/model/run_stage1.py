@@ -170,5 +170,6 @@ def run_stage1(current_date: str ='2024-10-22', save_figs: bool = False, print_o
 
 if __name__=='__main__':
     current_date_list = ['2023-10-22', '2024-01-01','2024-10-22']
+    current_date_list = ['2024-10-22']
     for date in current_date_list:
-        run_stage1(current_date=date)
+        run_stage1(current_date=date, print_output=True)

@@ -25,7 +25,8 @@ def run_stage2(current_date: str, window: int, save_figs: bool = False, print_ou
         hist_avg_window=window
     )
     trans_data.run_transform()
-    ids = ['SEASON_ID','GAME_ID','GAME_DATE','HOME_TEAM_ID','AWAY_TEAM_ID','HOME_TEAM','AWAY_TEAM'] 
+    ids = ['SEASON_ID','GAME_ID','GAME_DATE','HOME_TEAM_ID','AWAY_TEAM_ID','HOME_TEAM','AWAY_TEAM', 
+           f'HOME_AVG{window}_NET_COMPOSITE_EFFORT',f'AWAY_AVG{window}_NET_COMPOSITE_EFFORT'] 
     # Prep columns and target
     target = 'EST_HOME_NRtg'
     X_cols = ids + [
