@@ -62,4 +62,18 @@ def run_stage2(current_date: str, window: int, save_figs: bool = False, print_ou
     
 
 if __name__=='__main__':
-    run_stage2(current_date='2024-10-22',window=10)
+    import logging
+    from src.steps.model.model_utils import daterange
+    
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+    logger = logging.getLogger(__name__)
+    
+    start_date = pd.to_datetime('2024-10-22')
+    end_date = pd.to_datetime('2025-06-22')
+    
+    for date in daterange(start_date=start_date, end_date=end_date):
+        
+        date_str = date.strftime('%Y-%m-%d')
+        logger.info(f"Run Stage 2 Model for Game Date: {date_str}")
+        run_stage2(current_date=date_str,window=10)
+    

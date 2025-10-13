@@ -7,8 +7,12 @@ from scipy.stats import norm
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+from src.config import Config
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
+
+config = Config()
 
 class SingleGameSim:
     """
@@ -24,8 +28,8 @@ class SingleGameSim:
         abar: float,
         pred_nrtg: float,
         dt: Optional[float], 
-        N: Optional[int],
-        N_sim: int = 100,
+        n_points: int = config.simulation['n_points'],
+        n_sim: int = config.simulation['n_sim'],
         T: float = 1,  
         m_H: float = 1, # Need to estimate with additional linear model
         m_A: float = 1, # Need to estimate with additional linear model
@@ -34,9 +38,9 @@ class SingleGameSim:
         sigma: float = 15 # Need to estimate with additional linear model
     ) -> None:
         
-        if dt is None and N is None:
+        if dt is None and n_points is None:
             raise ValueError("Must specify one of 'dt' and 'N'.")
-        if dt is not None and N is not None:
+        if dt is not None and n_points is not None:
             raise ValueError("Cannot specify both 'dt' and 'N'. Choose one.")
         
         self.T = T # End-of-Game time
@@ -49,22 +53,22 @@ class SingleGameSim:
         self.pred_nrtg = pred_nrtg # predictive net rating
         self.X0 = 0 # score differential at beginning of game
         self.sigma = sigma # volatility/diffusion
-        self.N_sim = N_sim # number of simulated paths to sample
+        self.n_sim = n_sim # number of simulated paths to sample
         
-        if N is not None:
-            self.N = N
-            self.dt = self.T/self.N
+        if n_points is not None:
+            self.n_points = n_points
+            self.dt = self.T/self.n_points
         else:
             assert dt is not None
             self.dt = dt
-            self.N = int(self.T/self.dt)
+            self.n_points = int(self.T/self.dt)
 
         if self.T == 1:
             time_scale = 'Proportion of Game Played'
         else:
             raise ValueError('Unsupported time scale. Please set T equal to 1.')
         
-        self.time_vec = np.linspace(0,self.T, self.N+1)
+        self.time_vec = np.linspace(0,self.T, self.n_points+1)
 
             
         logger.info("="*100)
@@ -73,7 +77,7 @@ class SingleGameSim:
         logger.info(f"Time Scale: {time_scale}")
         logger.info(f"Total Time Interval: [0,{self.T}]")
         logger.info(f"Sub-interval length: Δt = {self.dt}")
-        logger.info(f"Number of sub-intervals: {self.N}")
+        logger.info(f"Number of sub-intervals: {self.n_points}")
         logger.info(f"Number of time points: {len(self.time_vec)}")
         logger.info("\n")
         logger.info("="*100)
@@ -139,11 +143,11 @@ class SingleGameSim:
     def euler_maruyama(self):
         """Compute Full Euler-Maruyama Approximation"""
         # Initialize with zeros, keep zeros in first row
-        X_mat = np.zeros((self.N+1, self.N_sim))
+        X_mat = np.zeros((self.n_points+1, self.n_sim))
         
         # Loop over each time after t=0
-        for sim in range(self.N_sim):
-            for tn in range(1,self.N+1):
+        for sim in range(self.n_sim):
+            for tn in range(1,self.n_points+1):
                 X_mat[tn,sim] = self.euler_maruyama_step(x0=X_mat[tn-1,sim])
 
         self.X_mat = X_mat
@@ -153,7 +157,7 @@ class SingleGameSim:
     def plot_paths(self):
         """Plot simulated paths and mean path of score differential process"""
         # Plot each simulated path
-        for sim in range(self.N_sim):
+        for sim in range(self.n_sim):
             sns.lineplot(x=self.time_vec, y=self.X_mat[:,sim], alpha=.05, color='black')
         
         # Add mean path line

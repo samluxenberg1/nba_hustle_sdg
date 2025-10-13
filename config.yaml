@@ -1,0 +1,41 @@
+# Historical Feature Window Size
+feature_creation:
+  window: 10
+
+
+# Optimal Control Simulation Parameters
+simulation:
+  n_sim: 100
+  n_points: 1000
+  time_scale: 1.0
+  interval_prob: 0.95
+
+# Model Parameters (defaults)
+model:
+  m_H: 1.0
+  m_A: 1.0
+  alpha_H: 10.0
+  alpha_A: 10.0
+  sigma: 15.0
+
+# Data Paths
+data:
+  input_dir: "data/raw"
+  output_dir: "data/results"
+  games_file: "season_games.csv"
+
+# Evaluation Season Configuration
+evaluation:
+  start_date: "2024-10-22"
+  end_date: "2025-06-22"
+  
+# Logging
+logging:
+  level: "INFO"
+  format: "%(asctime)s [%(levelname)s] %(message)s"
+  
+# Analysis
+analysis:
+  interval_prob: 0.95
+  save_plots: False
+  plot_dir: "plots"

@@ -49,7 +49,7 @@ class ModelStage2(RegressionDiagnostics):
     def fit_stage2_model(self) -> RegressionResultsWrapper:
         """Fit Stage 2 OLS Model"""
         logger.info(f"Fitting stage 2 model...")
-        X1 = sm.add_constant(self.X_train)
+        X1 = sm.add_constant(self.X_train, has_constant='add')
         self.reg_stage2 = sm.OLS(endog=self.y_train, exog=X1).fit()
         
         return self.reg_stage2
@@ -60,8 +60,7 @@ class ModelStage2(RegressionDiagnostics):
             raise ValueError("Stage 2 model must be fitted first. Call fit_stage2_model()") 
                          
         logger.info(f"Predicting stage 2 model upcoming games...")
-        X1 = sm.add_constant(self.X_test)
-        
+        X1 = sm.add_constant(self.X_test, has_constant='add') # ensure contant value is added even if 0 variance column exists (in case of 1 row too)
         return self.reg_stage2.predict(X1)
     
     def _print_model_summary(self):
@@ -105,10 +104,16 @@ class ModelStage2(RegressionDiagnostics):
 
         # Save
         current_date_fmt = datetime.strftime(datetime.strptime(self.current_date,"%Y-%m-%d"),"%Y%m%d")
+        train_output_dir = os.path.join(output_dir, 'train_stage2_effort')
+        test_output_dir = os.path.join(output_dir, 'test_stage2_effort')
         os.makedirs(output_dir, exist_ok=True)
-        train_output_path = os.path.join(output_dir, f'df_train_stage2_effort_{current_date_fmt}.csv')
-        test_output_path = os.path.join(output_dir, f'df_test_stage2_effort_{current_date_fmt}.csv')
+        os.makedirs(train_output_dir, exist_ok=True)
+        os.makedirs(test_output_dir, exist_ok=True)
+        train_output_path = os.path.join(train_output_dir, f'df_train_stage2_effort_{current_date_fmt}.csv')
+        test_output_path = os.path.join(test_output_dir, f'df_test_stage2_effort_{current_date_fmt}.csv')
 
         df_test.to_csv(test_output_path, index=False)
         df_train.to_csv(train_output_path, index=False)
+
+
     
