@@ -41,4 +41,8 @@ class Config:
     @property
     def evaluation(self) -> Dict[str, Any]:
         return self.config['evaluation']
+    
+    @property
+    def features_stage1(self) -> Dict[str, Any]:
+        return self.config['features_stage1']
 

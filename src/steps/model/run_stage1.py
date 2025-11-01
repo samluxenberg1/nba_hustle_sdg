@@ -5,6 +5,7 @@ import numpy as np
 
 from src.steps.model.model_stage1 import ModelStage1
 from src.constants import hustle_stats, home_away_id_cols
+from src.config import Config
 
 import logging 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -87,39 +88,36 @@ def prep_net_model_data(
     )
 
 
-def run_stage1(current_date: str ='2024-10-22', save_figs: bool = False, print_output: bool = False, create_plots: bool = False):
+def run_stage1(
+        df_transformed: pd.DataFrame,
+        current_date: str,
+        output_dir: str, 
+        save_figs: bool = False, 
+        print_output: bool = False, 
+        create_plots: bool = False,
+        save_data: bool = False
+    ) -> pd.DataFrame:
     # Read in data
     logger.info("Read in data...")
-    DATA_DIR = 'data/'
-    input_path = os.path.join(DATA_DIR, 'transformed_data', 'df_transformed.csv')
-    output_dir = os.path.join(DATA_DIR, 'stage1_effort')
-    df_trans = pd.read_csv(input_path)
-    logger.info(f"df_trans: {df_trans.shape}")
+    logger.info(f"df_trans: {df_transformed.shape}")
 
-    # Define available reatures
-    features_to_exclude = ['CONTESTED_SHOTS','BOX_OUTS', 'SCREEN_AST_PTS', 'BOX_OUT_PLAYER_TEAM_REBS', 'LOOSE_BALLS_RECOVERED','BOX_OUT_PLAYER_REBS']
-    features = list(set(hustle_stats)-set(features_to_exclude))
-    off_features = ['OFF_BOXOUTS','SCREEN_ASSISTS','OFF_LOOSE_BALLS_RECOVERED']
-    def_features = [
-        'DEFLECTIONS','CONTESTED_SHOTS_3PT', 'CONTESTED_SHOTS_2PT',
-        'DEF_LOOSE_BALLS_RECOVERED','CHARGES_DRAWN','DEF_BOXOUTS'
-    ] 
+    config = Config()
 
     # Convert game date to datetime to split
     logger.info("Convert GAME_DATE to datetime...")
-    df_trans['GAME_DATE'] = pd.to_datetime(df_trans['GAME_DATE'])
+    df_transformed['GAME_DATE'] = pd.to_datetime(df_transformed['GAME_DATE'])
 
     # Split
     logger.info(f"Split transformed data on {current_date}")
     #df_trans_score = df_trans[df_trans['GAME_DATE']==current_date]
-    df_trans_train = df_trans[df_trans['GAME_DATE']<current_date]
+    df_trans_train = df_transformed[df_transformed['GAME_DATE']<current_date]
     logger.info(f"df_trans_train: {df_trans_train.shape}")
 
     # Offensive Rating Model
     logger.info("Estimating offensive effort...")
     comp_eff_off = prep_off_def_model_data(
         df_train=df_trans_train, 
-        features=off_features, 
+        features=config.features_stage1['offensive_features'],
         target_name='ORtg',
         effort_type='off',
         model_name='Offensive Rating'
@@ -128,7 +126,8 @@ def run_stage1(current_date: str ='2024-10-22', save_figs: bool = False, print_o
         output_dir=output_dir,
         save_figs=save_figs,
         print_output=print_output,
-        create_plots=create_plots
+        create_plots=create_plots,
+        save_data=save_data
     )
     
     logger.info("Offensive effort complete.")
@@ -137,7 +136,7 @@ def run_stage1(current_date: str ='2024-10-22', save_figs: bool = False, print_o
     logger.info("Estimating defensive effort...")
     comp_eff_def = prep_off_def_model_data(
         df_train=df_trans_train, 
-        features=def_features, 
+        features=config.features_stage1['defensive_features'], 
         target_name='DRtg',
         effort_type='def',
         model_name='Defensive Rating'
@@ -146,7 +145,8 @@ def run_stage1(current_date: str ='2024-10-22', save_figs: bool = False, print_o
         output_dir=output_dir,
         save_figs=save_figs,
         print_output=print_output,
-        create_plots=create_plots
+        create_plots=create_plots,
+        save_data=save_data
     )
     
     logger.info("Defensive effort complete.")
@@ -163,13 +163,22 @@ def run_stage1(current_date: str ='2024-10-22', save_figs: bool = False, print_o
         output_dir=output_dir,
         save_figs=save_figs,
         print_output=print_output,
-        create_plots=create_plots
+        create_plots=create_plots,
+        save_data=save_data
     )
     
     logger.info("Net effort complete.")
 
+    return net_stage1
+
 if __name__=='__main__':
+
+    DATA_DIR = 'data/'
+    input_path = os.path.join(DATA_DIR, 'transformed_data', 'df_transformed.csv')
+    output_dir = os.path.join(DATA_DIR, 'stage1_effort')
+    df_trans = pd.read_csv(input_path)
+
     current_date_list = ['2023-10-22', '2024-01-01','2024-10-22']
     current_date_list = ['2024-10-22']
     for date in current_date_list:
-        run_stage1(current_date=date, print_output=True)
+        run_stage1(df_transformed=df_trans, output_dir=output_dir, current_date=date, print_output=True)

@@ -1,6 +1,6 @@
 import os
 import logging
-from typing import Optional, List
+from typing import Optional, List, Tuple
 import pandas as pd
 import statsmodels.api as sm
 from statsmodels.regression.linear_model import RegressionResultsWrapper
@@ -70,7 +70,14 @@ class ModelStage2(RegressionDiagnostics):
         
         print(self.reg_stage2.summary())
 
-    def run_stage2_model(self, output_dir: str, save_figs: bool =False, print_output: bool =False, create_plots: bool =False):
+    def run_stage2_model(
+            self, 
+            output_dir: str, 
+            save_figs: bool = False, 
+            print_output: bool = False, 
+            create_plots: bool = False, 
+            save_data: bool = False
+        ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """Run Stage 2 Model"""
         # Fit model
         model = self.fit_stage2_model()
@@ -81,7 +88,7 @@ class ModelStage2(RegressionDiagnostics):
 
         # Training Predictions
         y_pred_train = model.fittedvalues
-        y_pred_train_df = pd.DataFrame({'y_pred_train': y_pred_train})
+        y_pred_train_df = pd.DataFrame({'y_pred_train': y_pred_train, f'{self.target_name}': self.y_train})
         df_train = pd.concat([self.X_train, y_pred_train_df], axis=1)
         df_train = pd.concat([self.id_data_train, df_train], axis=1)
         logger.info(f"Train RMSE: {rmse(y_true=self.y_train, y_pred=y_pred_train): .3f}")
@@ -103,17 +110,20 @@ class ModelStage2(RegressionDiagnostics):
         df_test = pd.concat([self.id_data_test, df_test], axis=1)
 
         # Save
-        current_date_fmt = datetime.strftime(datetime.strptime(self.current_date,"%Y-%m-%d"),"%Y%m%d")
-        train_output_dir = os.path.join(output_dir, 'train_stage2_effort')
-        test_output_dir = os.path.join(output_dir, 'test_stage2_effort')
-        os.makedirs(output_dir, exist_ok=True)
-        os.makedirs(train_output_dir, exist_ok=True)
-        os.makedirs(test_output_dir, exist_ok=True)
-        train_output_path = os.path.join(train_output_dir, f'df_train_stage2_effort_{current_date_fmt}.csv')
-        test_output_path = os.path.join(test_output_dir, f'df_test_stage2_effort_{current_date_fmt}.csv')
+        if save_data:     
+            current_date_fmt = datetime.strftime(datetime.strptime(self.current_date,"%Y-%m-%d"),"%Y%m%d")
+            train_output_dir = os.path.join(output_dir, 'train_stage2_effort')
+            test_output_dir = os.path.join(output_dir, 'test_stage2_effort')
+            os.makedirs(output_dir, exist_ok=True)
+            os.makedirs(train_output_dir, exist_ok=True)
+            os.makedirs(test_output_dir, exist_ok=True)
+            train_output_path = os.path.join(train_output_dir, f'df_train_stage2_effort_{current_date_fmt}.csv')
+            test_output_path = os.path.join(test_output_dir, f'df_test_stage2_effort_{current_date_fmt}.csv')
 
-        df_test.to_csv(test_output_path, index=False)
-        df_train.to_csv(train_output_path, index=False)
+            df_test.to_csv(test_output_path, index=False)
+            df_train.to_csv(train_output_path, index=False)
+
+        return df_train, df_test
 
 
     

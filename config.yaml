@@ -39,3 +39,17 @@ analysis:
   interval_prob: 0.95
   save_plots: False
   plot_dir: "plots"
+
+# Stage 1 Features
+features_stage1:
+  offensive_features:
+    - 'OFF_BOXOUTS'
+    - 'SCREEN_ASSISTS'
+    - 'OFF_LOOSE_BALLS_RECOVERED'
+  defensive_features:
+    - 'DEFLECTIONS'
+    - 'CONTESTED_SHOTS_3PT'
+    - 'CONTESTED_SHOTS_2PT'
+    - 'DEF_LOOSE_BALLS_RECOVERED'
+    - 'CHARGES_DRAWN'
+    - 'DEF_BOXOUTS'
