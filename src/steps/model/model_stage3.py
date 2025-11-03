@@ -50,7 +50,7 @@ class ModelStage3(RegressionDiagnostics):
             print_output: bool = False, 
             create_plots: bool = False, 
             save_data: bool = False
-    ) -> Tuple[float, float, float]:
+    ) -> Tuple[float, float, float, RegressionResultsWrapper]:
         """Run Stage 3 Model"""
         # Fit model
         model = self.fit_stage3_model()
@@ -91,7 +91,7 @@ class ModelStage3(RegressionDiagnostics):
             #train_output_path = os.path.join(train_output_dir, f'df_train_stage2_effort_{current_date_fmt}.csv')
             #test_output_path = os.path.join(test_output_dir, f'df_test_stage2_effort_{current_date_fmt}.csv')
         
-        return m_H, m_A, sigma
+        return m_H, m_A, sigma, model
         
 
 

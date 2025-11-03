@@ -57,7 +57,7 @@ def run_stage2(
         current_date=current_date
     )
     
-    df_train, df_test = model_nrtg.run_stage2_model(
+    df_train, df_test, model_net_stage2 = model_nrtg.run_stage2_model(
         output_dir=output_dir,
         save_figs=save_figs,
         print_output=print_output,
@@ -65,7 +65,7 @@ def run_stage2(
         save_data=save_data
     )
 
-    return df_train, df_test
+    return df_train, df_test, model_net_stage2
     
 
 if __name__=='__main__':
@@ -90,7 +90,7 @@ if __name__=='__main__':
         
         date_str = date.strftime('%Y-%m-%d')
         logger.info(f"\n\n\nRun Stage 2 Model for Game Date: {date_str}")
-        df_train, df_test = run_stage2(df_transformed=df_trans, df_stage1_output=df_stage1, output_dir=output_dir,current_date=date_str,window=10)
+        df_train, df_test, model = run_stage2(df_transformed=df_trans, df_stage1_output=df_stage1, output_dir=output_dir,current_date=date_str,window=10)
         logger.info(f"Data Shapes - Train: {df_train.shape}, Test: {df_test.shape}")
         print("="*50)
         print("1st 5 Rows of df_train")

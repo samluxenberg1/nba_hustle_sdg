@@ -1,5 +1,5 @@
 import os
-from typing import Literal, List
+from typing import Literal, List, Tuple
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -108,7 +108,14 @@ class ModelStage1(RegressionDiagnostics):
         logger.info(f"Spearman Correlation: {spearman_stat: .3f}, P-value: {spearman_pval: .5f}")
         logger.info(f"Kendall's Tau Correlation: {kendall_stat: .3f}, P-value: {kendall_pval: .5f}")
 
-    def run_stage1_model(self, output_dir: str, save_figs: bool =False, print_output: bool =False, create_plots: bool =False, save_data: bool = False):
+    def run_stage1_model(
+            self, 
+            output_dir: str, 
+            save_figs: bool =False, 
+            print_output: bool =False, 
+            create_plots: bool =False, 
+            save_data: bool = False
+            ) -> Tuple[pd.DataFrame, RegressionResultsWrapper]:
         """Run Stage 1 Model"""
         # Fit model
         model = self.fit_stage1_model()
@@ -149,6 +156,6 @@ class ModelStage1(RegressionDiagnostics):
 
             self.X_with_ids.to_csv(output_path, index=False)
 
-        return self.X_with_ids
+        return self.X_with_ids, model
 
 

@@ -1,7 +1,8 @@
 import os
-from typing import List, Literal
+from typing import List, Literal, Tuple
 import pandas as pd
 import numpy as np
+from statsmodels.regression.linear_model import RegressionResultsWrapper
 
 from src.steps.model.model_stage1 import ModelStage1
 from src.constants import hustle_stats, home_away_id_cols
@@ -11,10 +12,13 @@ import logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
+
+
+
 def prep_off_def_model_data(
         df_train: pd.DataFrame, 
         features: List[str], 
-        target_name: str, 
+        target_name: str,
         effort_type: Literal['off','def','net'],
         model_name: str
     ) -> ModelStage1:
@@ -49,7 +53,7 @@ def prep_off_def_model_data(
         id_cols=ids, 
         model_name=model_name, 
         target_name=target_name
-    )
+        )
 
 def prep_net_model_data(
         df_train: pd.DataFrame, 
@@ -96,7 +100,7 @@ def run_stage1(
         print_output: bool = False, 
         create_plots: bool = False,
         save_data: bool = False
-    ) -> pd.DataFrame:
+    ) -> Tuple[pd.DataFrame, RegressionResultsWrapper]:
     # Read in data
     logger.info("Read in data...")
     logger.info(f"df_trans: {df_transformed.shape}")
@@ -122,7 +126,7 @@ def run_stage1(
         effort_type='off',
         model_name='Offensive Rating'
     )
-    off_stage1 = comp_eff_off.run_stage1_model(
+    df_off_stage1, model_off_stage1 = comp_eff_off.run_stage1_model(
         output_dir=output_dir,
         save_figs=save_figs,
         print_output=print_output,
@@ -141,7 +145,7 @@ def run_stage1(
         effort_type='def',
         model_name='Defensive Rating'
     )
-    def_stage1 = comp_eff_def.run_stage1_model(
+    df_def_stage1, model_def_stage1 = comp_eff_def.run_stage1_model(
         output_dir=output_dir,
         save_figs=save_figs,
         print_output=print_output,
@@ -159,7 +163,7 @@ def run_stage1(
         def_effort=comp_eff_def.X_with_ids,
         model_name='Net Rating'
     )
-    net_stage1 = comp_eff_net.run_stage1_model(
+    df_net_stage1, model_net_stage1 = comp_eff_net.run_stage1_model(
         output_dir=output_dir,
         save_figs=save_figs,
         print_output=print_output,
@@ -169,7 +173,7 @@ def run_stage1(
     
     logger.info("Net effort complete.")
 
-    return net_stage1
+    return df_net_stage1, model_net_stage1
 
 if __name__=='__main__':
 

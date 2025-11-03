@@ -5,6 +5,7 @@ import pandas as pd
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
 import seaborn as sns
+from statsmodels.regression.linear_model import RegressionResultsWrapper
 
 
 from src.constants import four_factors_stats
@@ -22,7 +23,7 @@ def run_stage3(
     print_output: bool = False, 
     create_plots: bool = False,
     save_data: bool = False
-) -> Tuple[float, float, float]:
+) -> Tuple[float, float, float, RegressionResultsWrapper]:
     # Step 1 - Transform Data for Stage 3 Model
     trans_data = TransformStage3(
         df_transformed=df_transformed, 
@@ -50,8 +51,8 @@ def run_stage3(
         model_name='Stage3_Model'
     )
 
-    m_H, m_A, sigma = model_nrtg.run_stage3_model()
+    m_H, m_A, sigma, model = model_nrtg.run_stage3_model()
 
     print(f"m_H: {m_H: .2f}, m_A: {m_A: .2f}, sigma: {sigma: .2f}")
 
-    return m_H, m_A, sigma
+    return m_H, m_A, sigma, model

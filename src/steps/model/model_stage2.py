@@ -77,7 +77,7 @@ class ModelStage2(RegressionDiagnostics):
             print_output: bool = False, 
             create_plots: bool = False, 
             save_data: bool = False
-        ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        ) -> Tuple[pd.DataFrame, pd.DataFrame, RegressionResultsWrapper]:
         """Run Stage 2 Model"""
         # Fit model
         model = self.fit_stage2_model()
@@ -123,7 +123,7 @@ class ModelStage2(RegressionDiagnostics):
             df_test.to_csv(test_output_path, index=False)
             df_train.to_csv(train_output_path, index=False)
 
-        return df_train, df_test
+        return df_train, df_test, model
 
 
     
