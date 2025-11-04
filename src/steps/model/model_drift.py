@@ -22,11 +22,26 @@ df_transformed.sort_values('GAME_DATE_dt', inplace=True)
 dates = df_transformed[df_transformed['GAME_DATE_dt']>=TEST_DATE]['GAME_DATE'].drop_duplicates()
 
 WINDOW = 10
+
+# Stage 1 Parameters
+off_effort_list = []
+def_effort_list = []
+
+# Stage 2 Parameters
+home_adv_list = []
+avg_efg_pct_diff_list = []
+avg_fta_rate_diff_list = []
+avg_tm_tov_pct_diff_list = []
+avg_oreb_pct_diff_list = []
+
+# Stage 3 Parameters
+home_net_effort_list = []
+away_net_effort_list = []
 m_H_list = []
 m_A_list = []
 sigma_list = []
 
-for game_date in dates[:4]:
+for game_date in dates:
     df_trans = df_transformed.copy()
     print("="*100)
     num_games = len(df_trans[df_trans['GAME_DATE_dt']==game_date])
@@ -48,6 +63,8 @@ for game_date in dates[:4]:
     print(model_stage1.summary())
     print("Model Coefficient Estimates:")
     print(model_stage1.params)
+    off_effort_list.append(model_stage1.params[1])
+    def_effort_list.append(model_stage1.params[2])
     
 
     # Predict current date's net ratings
@@ -67,7 +84,11 @@ for game_date in dates[:4]:
     print(model_stage2.summary())
     print("Model Coefficient Estimates:")
     print(model_stage2.params)
-   
+    home_adv_list.append(model_stage2.params[0])
+    avg_efg_pct_diff_list.append(model_stage2.params[1])
+    avg_fta_rate_diff_list.append(model_stage2.params[2])
+    avg_tm_tov_pct_diff_list.append(model_stage2.params[3])
+    avg_oreb_pct_diff_list.append(model_stage2.params[4])
 
 
     # Take y_pred_train and use as a predictor of current game net rating for all games prior to today
@@ -86,34 +107,83 @@ for game_date in dates[:4]:
     print(model_stage3.summary())
     print("Drift Parameter Estimates:")
     print(f"m_H: {m_H}, m_A: {m_A}, sigma: {sigma_est}")
+    home_net_effort_list.append(model_stage3.params[0])
+    away_net_effort_list.append(model_stage3.params[1])
     m_H_list.append(m_H)
     m_A_list.append(m_A)
     sigma_list.append(sigma_est)
 
-# import seaborn as sns
-# import matplotlib.pyplot as plt
-# df_drift_params = pd.DataFrame({
-#     'GAME_DATE': dates.values,
-#     'm_H': m_H_list,
-#     'm_A': m_A_list,
-#     'sigma': sigma_list
-# })
-# df_drift_params['GAME_DATE'] = pd.to_datetime(df_drift_params['GAME_DATE'])
-# plt.figure(figsize=(12,6))
-# sns.lineplot(data=df_drift_params, x='GAME_DATE', y='m_H', marker='o', label='m_H')
-# sns.lineplot(data=df_drift_params, x='GAME_DATE', y='m_A', marker='o', label='m_A')
-# plt.title('Drift Parameters Over Time')
-# plt.xlabel('Game Date')
-# plt.ylabel('Drift Parameter Value')
-# plt.legend()
-# plt.grid()
-# plt.show()
-# plt.figure(figsize=(12,6))
-# sns.lineplot(data=df_drift_params, x='GAME_DATE', y='sigma', marker='o', color='orange')
-# plt.title('Sigma Over Time')
-# plt.xlabel('Game Date')
-# plt.ylabel('Sigma Value')
-# plt.grid()
-# plt.show()
-# print("Drift Parameters DataFrame:")
-# print(df_drift_params)
+import seaborn as sns
+import matplotlib.pyplot as plt
+df_drift_params = pd.DataFrame({
+    'GAME_DATE': dates.values,
+    'off_effort': off_effort_list,
+    'def_effort': def_effort_list,
+    'home_adv': home_adv_list,
+    'avg_efg_pct_diff': avg_efg_pct_diff_list,
+    'avg_fta_rate_diff': avg_fta_rate_diff_list,
+    'avg_tm_tov_pct_diff': avg_tm_tov_pct_diff_list,
+    'avg_oreb_pct_diff': avg_oreb_pct_diff_list,
+    'home_net_effort': home_net_effort_list,
+    'away_net_effort': away_net_effort_list,
+    'm_H': m_H_list,
+    'm_A': m_A_list,
+    'sigma': sigma_list
+})
+df_drift_params['GAME_DATE'] = pd.to_datetime(df_drift_params['GAME_DATE'])
+
+# Off/Def Effort
+plt.figure(figsize=(12,6))
+sns.lineplot(data=df_drift_params, x='GAME_DATE',y='off_effort', marker='o', label='Offensive Effort')
+sns.lineplot(data=df_drift_params, x='GAME_DATE',y='def_effort', marker='o', label='Defensive Effort')
+sns.lineplot(data=df_drift_params, x='GAME_DATE',y='home_adv', marker='o', label='Home Advantage')
+plt.title('Effort Effects Over Time')
+plt.xlabel('Game Date')
+plt.ylabel('Effort Parameter Value')
+plt.legend()
+plt.grid()
+plt.show()
+
+# Avg Four Factors Diff
+plt.figure(figsize=(12,6))
+sns.lineplot(data=df_drift_params, x='GAME_DATE',y='avg_efg_pct_diff', marker='o', label='Avg EFG% Diff')
+sns.lineplot(data=df_drift_params, x='GAME_DATE',y='avg_fta_rate_diff', marker='o', label='Avg FTA Rate Diff')
+sns.lineplot(data=df_drift_params, x='GAME_DATE',y='avg_tm_tov_pct_diff', marker='o', label='Avg TOV% Diff')
+sns.lineplot(data=df_drift_params, x='GAME_DATE',y='avg_oreb_pct_diff', marker='o', label='Avg OREB% Diff')
+plt.title('Four Factors Effects Over Time')
+plt.xlabel('Game Date')
+plt.ylabel('Four Factor Parameter Value')
+plt.legend()
+plt.grid()
+plt.show()
+
+# Net Effort
+plt.figure(figsize=(12,6))
+sns.lineplot(data=df_drift_params, x='GAME_DATE',y='home_net_effort', marker='o', label='Home Effort')
+sns.lineplot(data=df_drift_params, x='GAME_DATE',y='away_net_effort', marker='o', label='Away Effort')
+plt.title('Home/Away Net Effort Over Time')
+plt.xlabel('Game Date')
+plt.ylabel('Net Effort Parameter Value')
+plt.legend()
+plt.grid()
+plt.show()
+# m_H and m_A
+plt.figure(figsize=(12,6))
+sns.lineplot(data=df_drift_params, x='GAME_DATE', y='m_H', marker='o', label='m_H')
+sns.lineplot(data=df_drift_params, x='GAME_DATE', y='m_A', marker='o', label='m_A')
+plt.title('Drift Parameters Over Time')
+plt.xlabel('Game Date')
+plt.ylabel('Drift Parameter Value')
+plt.legend()
+plt.grid()
+plt.show()
+# Sigma
+plt.figure(figsize=(12,6))
+sns.lineplot(data=df_drift_params, x='GAME_DATE', y='sigma', marker='o', color='orange')
+plt.title('Sigma Over Time')
+plt.xlabel('Game Date')
+plt.ylabel('Sigma Value')
+plt.grid()
+plt.show()
+print("Drift Parameters DataFrame:")
+print(df_drift_params)
