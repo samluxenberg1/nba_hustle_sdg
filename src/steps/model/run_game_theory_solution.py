@@ -41,12 +41,20 @@ m_H_list = []
 m_A_list = []
 sigma_list = []
 
-for game_date in dates:
+for game_date in dates[:5]:
     df_trans = df_transformed.copy()
     print("="*100)
     num_games = len(df_trans[df_trans['GAME_DATE_dt']==game_date])
     print(f"Game Date: {game_date}, Number of Games: {num_games}")
     print("="*100)
+    print("Transformed Data Sample:")
+    df_trans_prior = df_trans[df_trans['GAME_DATE_dt']<game_date].copy()
+    print(df_trans_prior[['GAME_DATE','HOME_TEAM_NAME','AWAY_TEAM_NAME','EST_HOME_POSS','EST_AWAY_POSS']].tail(3))
+    h_poss = df_trans_prior.groupby('HOME_TEAM_ABBREVIATION')['EST_HOME_POSS'].agg('mean')
+    a_poss = df_trans_prior.groupby('AWAY_TEAM_ABBREVIATION')['EST_AWAY_POSS'].agg('mean')
+    print(pd.DataFrame({'Home_Avg_Poss':h_poss, 'Away_Avg_Poss':a_poss}))
+
+    #print(df_trans[df_trans['GAME_DATE_dt']<game_date][['EST_HOME_POSS','EST_AWAY_POSS']].mean())
     # Estimate stage 1 effort with all latest data
     df_stage1, model_stage1 = run_stage1(
         df_transformed=df_trans,

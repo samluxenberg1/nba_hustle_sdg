@@ -74,6 +74,6 @@ class TransformStage3:
         # Step 3 - Join Net Rating to Stage 2 Output
         #self.merge_target_to_stage2_output()
 
-        print(self.df_train_stage2_output.head())
-        print(self.df_train_stage2_output.tail())
-        print(self.df_train_stage2_output.columns)
+        #print(self.df_train_stage2_output.head())
+        #print(self.df_train_stage2_output.tail())
+        #print(self.df_train_stage2_output.columns)

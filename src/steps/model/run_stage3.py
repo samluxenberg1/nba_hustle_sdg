@@ -28,7 +28,7 @@ def run_stage3(
     trans_data = TransformStage3(
         df_transformed=df_transformed, 
         df_stage1_output=df_stage1_output, 
-        df_train_stage2_output=df_train_stage2_output,
+        df_train_stage2_output=df_train_stage2_output, # df_train_stage2 is all game data PRIOR to current date
         current_date=current_date
     )
 
@@ -40,7 +40,7 @@ def run_stage3(
     X_cols = ids + ['HOME_NET_COMPOSITE_EFFORT','AWAY_NET_COMPOSITE_EFFORT']
     offset = 'y_pred_train'
 
-    y = trans_data.df_train_stage2_output[target] - trans_data.df_train_stage2_output[offset]
+    y = trans_data.df_train_stage2_output[target] - trans_data.df_train_stage2_output[offset] # offset
     X = trans_data.df_train_stage2_output[X_cols]
 
     model_nrtg = ModelStage3(
@@ -52,6 +52,8 @@ def run_stage3(
     )
 
     m_H, m_A, sigma, model = model_nrtg.run_stage3_model()
+
+    m_A = -m_A  # Adjust sign for away coefficient
 
     print(f"m_H: {m_H: .2f}, m_A: {m_A: .2f}, sigma: {sigma: .2f}")
 
