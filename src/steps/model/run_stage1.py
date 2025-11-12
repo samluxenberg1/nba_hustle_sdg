@@ -6,7 +6,7 @@ from statsmodels.regression.linear_model import RegressionResultsWrapper
 
 from src.steps.model.model_stage1 import ModelStage1
 from src.constants import hustle_stats, home_away_id_cols
-from src.config import Config
+from config.config import config
 
 import logging 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -39,8 +39,8 @@ def prep_off_def_model_data(
     ids = [id.replace('HOME_','') for id in home_ids]
 
     # Define target
-    y_home = df_train[f'EST_HOME_{target_name}'] 
-    y_away = df_train[f'EST_AWAY_{target_name}'] 
+    y_home = df_train[f'HOME_EST_{target_name}'] 
+    y_away = df_train[f'AWAY_EST_{target_name}'] 
 
     # Stack - Home | Away
     X = pd.concat([X_home, X_away], ignore_index=True)
@@ -63,12 +63,12 @@ def prep_net_model_data(
     ) -> ModelStage1:
     """Prepare data for input into net rating model"""
     # Define target
-    y_off_home = df_train['EST_HOME_ORtg']
-    y_def_home = df_train['EST_HOME_DRtg'] # HOME_DRtg = AWAY_ORtg
+    y_off_home = df_train['HOME_EST_ORtg']
+    y_def_home = df_train['HOME_EST_DRtg'] # HOME_DRtg = AWAY_ORtg
     y_net_home = y_off_home - y_def_home
 
-    y_off_away = df_train['EST_AWAY_ORtg']
-    y_def_away = df_train['EST_AWAY_DRtg'] # AWAY_DRtg = HOME_ORtg
+    y_off_away = df_train['AWAY_EST_ORtg']
+    y_def_away = df_train['AWAY_EST_DRtg'] # AWAY_DRtg = HOME_ORtg
     y_net_away = y_off_away - y_def_away
 
     y_net = pd.concat([y_net_home, y_net_away], ignore_index=True)
@@ -105,8 +105,6 @@ def run_stage1(
     logger.info("Read in data...")
     logger.info(f"df_trans: {df_transformed.shape}")
 
-    config = Config()
-
     # Convert game date to datetime to split
     logger.info("Convert GAME_DATE to datetime...")
     df_transformed['GAME_DATE'] = pd.to_datetime(df_transformed['GAME_DATE'])
@@ -121,7 +119,7 @@ def run_stage1(
     logger.info("Estimating offensive effort...")
     comp_eff_off = prep_off_def_model_data(
         df_train=df_trans_train, 
-        features=config.features_stage1['offensive_features'],
+        features=config['stage1']['offensive_features'],
         target_name='ORtg',
         effort_type='off',
         model_name='Offensive Rating'
@@ -140,7 +138,7 @@ def run_stage1(
     logger.info("Estimating defensive effort...")
     comp_eff_def = prep_off_def_model_data(
         df_train=df_trans_train, 
-        features=config.features_stage1['defensive_features'], 
+        features=config['stage1']['defensive_features'], 
         target_name='DRtg',
         effort_type='def',
         model_name='Defensive Rating'
