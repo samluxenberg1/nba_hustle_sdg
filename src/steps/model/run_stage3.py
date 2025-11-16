@@ -36,7 +36,7 @@ def run_stage3(
     
     # Prep columns for modeling
     ids = ['SEASON_ID','GAME_ID','GAME_DATE','HOME_TEAM_ID','AWAY_TEAM_ID','HOME_TEAM','AWAY_TEAM']
-    target = 'EST_HOME_NRtg' # To be offset by predicted net rating from stage 2 (to constrain coef = 1)
+    target = 'HOME_EST_NRtg' # To be offset by predicted net rating from stage 2 (to constrain coef = 1)
     X_cols = ids + ['HOME_NET_COMPOSITE_EFFORT','AWAY_NET_COMPOSITE_EFFORT']
     offset = 'y_pred_train'
 

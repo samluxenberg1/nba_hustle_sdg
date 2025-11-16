@@ -32,7 +32,7 @@ def run_stage2(
     ids = ['SEASON_ID','GAME_ID','GAME_DATE','HOME_TEAM_ID','AWAY_TEAM_ID','HOME_TEAM','AWAY_TEAM', 
            f'HOME_AVG{window}_NET_COMPOSITE_EFFORT',f'AWAY_AVG{window}_NET_COMPOSITE_EFFORT', f'AVG{window}_NET_COMPOSITE_EFFORT_DIFF'] 
     # Prep columns and target
-    target = 'EST_HOME_NRtg'
+    target = 'HOME_EST_NRtg'
     X_cols = ids + [
         f'AVG{window}_EFG_PCT_DIFF',
         f'AVG{window}_FTA_RATE_DIFF',

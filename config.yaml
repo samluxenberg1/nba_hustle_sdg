@@ -1,47 +1,45 @@
-# Historical Feature Window Size
-feature_creation:
+# ==========================================================================================
+# Game Theory Model Pipeline Configuration
+# ==========================================================================================
+
+# ------------------------------------------------------------------------------------------
+# Data paths
+# ------------------------------------------------------------------------------------------
+paths:
+  data_dir: "data/"
+  transformed_data_file: "data/transformed_data/df_transformed.csv"
+
+  # Output directories for each stage
+  output:
+    stage1_output_dir: "data/stage1_effort"
+    stage2_output_dir: "data/stage2_net_rating"
+    stage3_output_dir: "data/stage3_drift_params_est"
+    results: "data/results"
+    plots: "data/plots"
+
+# ------------------------------------------------------------------------------------------
+# Pipeline Parameters
+# ------------------------------------------------------------------------------------------
+pipeline:
+  # Date range for processing
+  test_start_date: "2024-10-22"
+  test_end_date: "2024-10-24"
+
+  # Rolling window size for calculations
   window: 10
 
+  # Output control
+  save_figs: false
+  save_date: false
+  print_output: false
+  create_plots: false
+  save_data: false
+  verbose: true
 
-# Optimal Control Simulation Parameters
-simulation:
-  n_sim: 100
-  n_points: 1000
-  time_scale: 1.0
-  interval_prob: 0.95
-
-# Model Parameters (defaults)
-model:
-  m_H: 1.0
-  m_A: 1.0
-  alpha_H: 10.0
-  alpha_A: 10.0
-  sigma: 15.0
-
-# Data Paths
-data:
-  input_dir: "data/raw"
-  output_dir: "data/results"
-  games_file: "season_games.csv"
-
-# Evaluation Season Configuration
-evaluation:
-  start_date: "2024-10-22"
-  end_date: "2025-06-22"
-  
-# Logging
-logging:
-  level: "INFO"
-  format: "%(asctime)s [%(levelname)s] %(message)s"
-  
-# Analysis
-analysis:
-  interval_prob: 0.95
-  save_plots: False
-  plot_dir: "plots"
-
-# Stage 1 Features
-features_stage1:
+# ------------------------------------------------------------------------------------------
+# Stage 1: Effort Estimation
+# ------------------------------------------------------------------------------------------
+stage1:
   offensive_features:
     - 'OFF_BOXOUTS'
     - 'SCREEN_ASSISTS'
@@ -53,3 +51,105 @@ features_stage1:
     - 'DEF_LOOSE_BALLS_RECOVERED'
     - 'CHARGES_DRAWN'
     - 'DEF_BOXOUTS'
+
+# ------------------------------------------------------------------------------------------
+# Stage 2: Net Rating Prediction
+# ------------------------------------------------------------------------------------------
+stage2:
+  features:
+    - "avg_efg_pct_diff"
+    - "avg_fta_rate_diff"
+    - "avg_tm_tov_pct_diff"
+    - "avg_oreb_pct_diff"
+
+  # Model parameters
+  include_home_advantage: true
+
+# ------------------------------------------------------------------------------------------
+# Stage 3: SDE Parameter Estimation
+# ------------------------------------------------------------------------------------------
+stage3:
+  include_offset: true
+
+# ------------------------------------------------------------------------------------------
+# Simulation: Optimal Control Problem
+# ------------------------------------------------------------------------------------------
+simulation:
+  # Simulation parameters
+  n_points: 1000      # Number of time points
+  n_sim: 100          # Number of simulation paths
+  T: 1                # Time horizon (1=full game)
+  dt: null            # Time step (null = auto-calculate)
+
+  # Risk tolerance parameters (alpha > 0)
+  # Higher values --> more risk averse --> suggests closer to average effort
+  # Lower values --> less risk averse --> suggests more than average effort
+  alpha_H: 0.1        # Home team risk aversion
+  alpha_A: 0.1        # Away team risk aversion
+
+  # Output control
+  show_plots: false
+  save_simulations: false
+  plot_confidence_interval: 0.9
+
+# ------------------------------------------------------------------------------------------
+# Possession Factor Calculation
+# ------------------------------------------------------------------------------------------
+possession:
+  # Use rolling window for possession calculation
+  use_rolling_window: true
+
+  # Size of rolling window
+  window: 10
+
+# ------------------------------------------------------------------------------------------
+# Visualization Settings
+# ------------------------------------------------------------------------------------------
+visualization:
+  # Figure settings
+  figure_size:
+    width: 12
+    height: 6
+  
+  # Style
+  style: "fivethirtyeight"
+  color_palette: "husl"
+
+  # Plot types to generate
+  plots:
+    effort_parameters: true
+    four_factors: true
+    net_effort: true
+    drift_parameters: true
+    sigma: true
+    simulation_paths: true
+
+  # Save settings
+  save_format: "png"
+  dpi: 300
+
+# ------------------------------------------------------------------------------------------
+# Logging Configuration
+# ------------------------------------------------------------------------------------------
+logging: 
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+  # File logging
+  log_to_file: true
+  log_file: "logs/pipeline.log"
+
+  # Console logging
+  log_to_console: true
+
+# ------------------------------------------------------------------------------------------
+# Exectution Control
+# ------------------------------------------------------------------------------------------
+execution: 
+  # What to run
+  run_stage1: true
+  run_stage2: true
+  run_stage3: true
+  solve_optimal_control: true
+
+
