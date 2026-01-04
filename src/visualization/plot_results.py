@@ -6,6 +6,14 @@ from typing import List, Tuple
 
 from config.config import config
 
+style = config['visualization']['style']
+palette = config['visualization']['color_palette']
+
+if style:
+    plt.style.use(style)
+if palette:
+    sns.set_palette(palette)
+
 def plot_effort_parameters(df: pd.DataFrame) -> None:
     """Plot offensive effort, defensive effort, and home advantage over time."""
     plt.figure(figsize=(config['visualization']['figure_size']['width'], 

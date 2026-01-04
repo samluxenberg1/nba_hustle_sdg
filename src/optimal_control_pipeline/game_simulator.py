@@ -10,6 +10,8 @@ from config.config import config
 @dataclass
 class GameParameters:
     """Parameters for a single game simulation"""
+    game_id: str
+    game_date: str
     home_team: str
     away_team: str
     hbar: float
@@ -101,7 +103,7 @@ class GameSimulator:
         )
 
         print("="*100)
-        print(f"Differential Game Results: {params.home_team} vs {params.away_team}")
+        print(f"Differential Game Results: {params.home_team} vs {params.away_team} on {params.game_date}; Game ID: {params.game_id}")
         print("="*100)
 
         sgs.results_summary(interval_prob=.9)
@@ -141,7 +143,9 @@ class GameSimulator:
         print("$"*150)
         print("Optimal Control Parameters")
         print("$"*150)
-
+        print(f"df_test columns: {df_test.columns.tolist()}")
+        print(df_test.head())
+        
         results = {}
 
         for index, row in df_test.iterrows():
@@ -150,6 +154,8 @@ class GameSimulator:
             away_team = row['AWAY_TEAM']
 
             params = GameParameters(
+                game_id=row['GAME_ID'],
+                game_date=row['GAME_DATE'],
                 home_team=home_team, 
                 away_team=away_team,
                 hbar=row[f'HOME_AVG{window}_NET_COMPOSITE_EFFORT'],

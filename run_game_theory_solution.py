@@ -13,31 +13,90 @@ def main():
 
     # Initialize and run pipeline (uses config.yaml)
     pipeline = GameTheoryPipeline()
-    df_results = pipeline.run()
+    params, sim_results = pipeline.run()
 
     # Create visualizations
     print("\n" + "="*100)
     print("Creating parameter visualizations...")
     print("="*100)
-    create_all_plots(df_results)
+    create_all_plots(params)
 
     print("\nPipeline execution complete!")
 
-    return pipeline, df_results
+    return pipeline, params, sim_results
 
 def quick_test():
     """Quick test without solving optimal control"""
     # Modify config temporarily
-    config['pipeline']['test_end_date'] = '2024-10-25'
+    config['pipeline']['test_end_date'] = '2024-10-24'
     config['visualization']['show_plots'] = False
 
     pipeline = GameTheoryPipeline()
-    results = pipeline.run(solve_control=False)
+    results, sim_results = pipeline.run(solve_control=True)
 
-    return pipeline, results
+    return pipeline, results, sim_results
 
 if __name__ == "__main__":
+    import os
+
     if len(sys.argv) > 1 and sys.argv[1] == 'test':
-        pipeline, results = quick_test()
+        pipeline, results, sim_results = quick_test()
+        print("Pipeline")
+        print(pipeline)
+        print("\nResults")
+        print(results.head())
+        results_path = os.path.join('results',f"results_{config['pipeline']['test_end_date']}_test.csv")
+        results.to_csv(results_path, index=False)
+        print("%"*100)
+        print("Simulation Results")
+        print(sim_results)
+        print("%"*100)
     else:
-        pipeline, results = main()
+        pipeline, results, sim_results = main()
+        print("Pipeline")
+        print(pipeline)
+        print("\nResults")
+        print(results.head())
+        results_path = os.path.join('results',f"results_{config['pipeline']['test_end_date']}.csv")
+        results.to_csv(results_path, index=False)
+        print("%"*100)
+        print("Simulation Results")
+        print(sim_results)
+        print("%"*100)
+
+    # What do I need for metrics?
+    # 1. Accuracy of optimal control for predicting winner
+    #### a) Winner of each game
+    #### b) Team optimal controls
+    #### c) Compute predicted winner from higher optimal control value
+    #### d) Confusion matrix
+    #### e) Classification calculations/report
+
+    # 2. How close does each team get to the optimal control? 
+    #### a) Team optimal controls
+    #### b) Compute the actual effort levels of each team (NOTE: this is on a per-100-possession basis. 
+    #### Will need to adjust this to be on the same scale as the optimal effort from the control problem.)
+    #### c) Overall residual analysis
+    ######## i) Plot residuals vs. time
+    ######## ii) Metrics: Avg Residual (bias, assuming optimal control is "true" value), RMSE, MAE
+    #### d) Summarized residual analysis
+    ######## i) Avg residual by team, Avg RMSE/MAE by team
+    ######## ii) Identify time points of when head coaching changes occurred. Were there any 
+    ######## differences before and after the change?
+
+    # 3. X_t represents the distribution of the score differential process. 
+    # How accurate are its predictions? How well calibrated is our model?
+    #### a) Actual score differential by end of game (time t = T)
+    #### b) Compute mean score differential by end of game (using formual for mean)
+    #### c) Compute RMSE/MAE, Average residual
+    #### d) Compute 80, 90, 95% interval (using formula)
+    ######## i) What proportion of games actually had score differentials that fell within these intervals?
+    #### e) If we can also get score differentials at the ends of quarters, could also measure the same
+    #### for each of these (i.e., X_.25, X_.50, X_.75)
+
+    # 4. Similar to 3, V(x=0, t=0) represents the optimal value of at the start of the game. This quantity
+    # incorporates the guess of a final score differential. So we can do the same calculations as in 3.
+
+
+
+

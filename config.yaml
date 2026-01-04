@@ -23,7 +23,7 @@ paths:
 pipeline:
   # Date range for processing
   test_start_date: "2024-10-22"
-  test_end_date: "2024-10-24"
+  test_end_date: "2025-04-13"
 
   # Rolling window size for calculations
   window: 10

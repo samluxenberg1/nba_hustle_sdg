@@ -31,7 +31,7 @@ class GameTheoryPipeline:
         df_transformed: Full transformed dataset
         dates: Series of dates to process
         params: Collected model parameters
-        results_df: DataFrame of parameter results
+        params_df: DataFrame of parameter results
         game_results: Dictionary of simulation results by date
     """
     def __init__(self):
@@ -39,7 +39,7 @@ class GameTheoryPipeline:
         self.df_transformed: Optional[pd.DataFrame] = None
         self.dates: Optional[pd.Series] = None
         self.params = ModelParameters()
-        self.results_df: Optional[pd.DataFrame] = None
+        self.params_df: Optional[pd.DataFrame] = None
         self.game_results: Dict[str, Dict] = {}
 
         self.possession_calc = PossessionCalculator()
@@ -206,7 +206,8 @@ class GameTheoryPipeline:
         df_stage1, _ = self._run_stage1(df_trans, game_date, verbose)
         df_train_stage2, df_test_stage2, _ = self._run_stage2(df_trans, df_stage1, game_date, verbose)
         m_H, m_A, sigma, _ = self._run_stage3(df_trans, df_stage1, df_train_stage2, game_date, verbose)
-
+        print(f"df_trans columns: {df_trans.columns.tolist()}")
+        print(df_trans.query("GAME_ID==22200001"))
         # Add date to results
         self.params.add_date(game_date)
 
@@ -217,9 +218,12 @@ class GameTheoryPipeline:
         
         return game_sims
     
-    def run(self, verbose: bool = True, solve_control: bool = True, show_plots: bool = False) -> pd.DataFrame:
+    def run(self, verbose: bool = True, solve_control: bool = True, show_plots: bool = False) -> Tuple[pd.DataFrame, Dict]:
         """
-        Run the complete pipeline
+        Run the complete pipeline. 
+
+        TODO: Predicted winner of each game based on optimal control values
+        TODO: Collect actual winner 
 
         Args:
             verbose: Whether to print detailed output (uses config if None)
@@ -248,20 +252,24 @@ class GameTheoryPipeline:
 
         # Convert parameters to DataFrame
         logger.info("Creating results DataFrame")
-        self.results_df = self.params.to_dataframe()
+        self.params_df = self.params.to_dataframe()
 
         if verbose:
             print("\nSDE Parameters DataFrame: ")
-            print(self.results_df)
+            print(self.params_df)
 
-        return self.results_df
+        # Convert game simulation results to DataFrame
+        logger.info("Creating results DataFrame")
+        #self.game_results_df = self.game_results.to_dataframe()
+
+        return self.params_df, self.game_results
     
-    def get_results(self) -> pd.DataFrame:
+    def get_params(self) -> pd.DataFrame:
         """Get the parameter results DataFrame"""
-        if self.results_df is None:
+        if self.params_df is None:
             raise RuntimeError("Pipeline has not been run yet. Call run() first.")
         
-        return self.results_df
+        return self.params_df
     
     def get_game_results(self, game_date: Optional[str] = None) -> Dict:
         """Get simulation results for games"""
@@ -272,6 +280,6 @@ class GameTheoryPipeline:
     def reset(self) -> None:
         """Reset the pipeline state"""
         self.params = ModelParameters()
-        self.results_df = None
+        self.params_df = None
         self.game_results = {}
         logger.info("Pipeline state has been reset")

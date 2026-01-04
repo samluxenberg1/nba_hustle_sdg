@@ -61,6 +61,7 @@ class ModelStage1(RegressionDiagnostics):
         if self.reg_stage1 is None:
             raise ValueError("Stage 1 model must be fitted first")
         
+        # No intercept used for effort calculation
         effort_vec = np.array(self.reg_stage1.params[1:]).reshape((-1,1))
         effort_mat = np.array(self.X)
 
