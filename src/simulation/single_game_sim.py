@@ -9,6 +9,7 @@ import seaborn as sns
 
 #from src.config import Config
 from config.config import config
+from src.simulation.simulation_results import SingleGameSimulationResults
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -36,7 +37,8 @@ class SingleGameSim:
         dt: Optional[float] = None, 
         n_points: Optional[int] = None,
         n_sim: Optional[int] = None,
-        T: Optional[float] = None
+        T: Optional[float] = None, 
+        interval_prob: Optional[float] = None
     ) -> None:
         
         # Game-specific (must be provided)
@@ -53,6 +55,7 @@ class SingleGameSim:
         # Simulation settings (use config defaults or provided values)
         self.n_sim = n_sim if n_sim is not None else config['simulation']['n_sim']
         self.T = T if T is not None else config['simulation']['T']
+        self.interval_prob = interval_prob if interval_prob is not None else config['simulation']['interval_prob']
 
         # Validate T value
         if self.T != 1:
@@ -82,11 +85,14 @@ class SingleGameSim:
         # Create time vector
         self.time_vec = np.linspace(0,self.T, self.n_points+1)
 
+        # Collect results
+        self.results: Optional[SingleGameSimulationResults] = None
+
             
         logger.info("="*100)
         logger.info("Time Interval Information")
         logger.info("="*100)
-        logger.info(f"Time Scale: Game Proportion")
+        logger.info("Time Scale: Game Proportion")
         logger.info(f"Total Time Interval: [0,{self.T}]")
         logger.info(f"Sub-interval length: Δt = {self.dt}")
         logger.info(f"Number of sub-intervals: {self.n_points}")
@@ -183,34 +189,102 @@ class SingleGameSim:
         """Compute Score Differential Process Interval Bounds"""
         expected_Xt = self.expected_score_diff(t=t)
         tail_prob = 1-interval_prob
-        lower_bound = norm.ppf(q=tail_prob/2, loc=expected_Xt, scale=self.sigma)
-        upper_bound = norm.ppf(q=tail_prob/2+interval_prob, loc=expected_Xt, scale=self.sigma)
+        std = self.sigma * np.sqrt(t)
+        lower_bound = norm.ppf(q=tail_prob/2, loc=expected_Xt, scale=std)
+        upper_bound = norm.ppf(q=tail_prob/2+interval_prob, loc=expected_Xt, scale=std)
         return expected_Xt, lower_bound, upper_bound
+    
+    def compute_and_store_results(self) -> SingleGameSimulationResults:
+        """Compute and store all key metrics"""
+        exp_q1, lower_q1, upper_q1 = self.score_diff_interval(t=0.25, interval_prob=self.interval_prob)
+        exp_q2, lower_q2, upper_q2 = self.score_diff_interval(t=0.50, interval_prob=self.interval_prob)
+        exp_q3, lower_q3, upper_q3 = self.score_diff_interval(t=0.75, interval_prob=self.interval_prob)
+        exp_q4, lower_q4, upper_q4 = self.score_diff_interval(t=1.0, interval_prob=self.interval_prob)
+
+        self.results = SingleGameSimulationResults(
+            home_optimal_control=float(self.home_optimal_control),
+            away_optimal_control=float(self.away_optimal_control),
+            home_value_t0=float(self.home_value_t0),
+            away_value_t0=float(self.away_value_t0),
+            exp_score_diff_q1=float(exp_q1),
+            exp_score_diff_q2=float(exp_q2),
+            exp_score_diff_q3=float(exp_q3),
+            exp_score_diff_q4=float(exp_q4),
+            lower_q1=float(lower_q1),
+            upper_q1=float(upper_q1),
+            lower_q2=float(lower_q2),
+            upper_q2=float(upper_q2),
+            lower_q3=float(lower_q3),
+            upper_q3=float(upper_q3),
+            lower_q4=float(lower_q4),
+            upper_q4=float(upper_q4),
+            interval_prob=self.interval_prob
+        )
+
+        return self.results
         
 
-    def results_summary(self, interval_prob: float):
+    def results_summary(self):
+        """Print single game simulation results summary"""
+        if self.results is None:
+            self.compute_and_store_results()
+        
+        assert self.results is not None
+        
         logger.info("="*50)
         logger.info("Optimal Controls")
         logger.info("="*50)
-        logger.info(f"Home Optimal Control: {self.home_optimal_control: .3f}")
-        logger.info(f"Away Optimal Control: {self.away_optimal_control: .3f}")
+        logger.info(f"Home Optimal Control: {self.results.home_optimal_control: .3f}")
+        logger.info(f"Away Optimal Control: {self.results.away_optimal_control: .3f}")
 
         logger.info("="*50)
         logger.info("Value Functions @ Beginning of Game")
         logger.info("="*50)
-        logger.info(f"Home Value @ t = 0: {self.home_value_t0: .3f}")
-        logger.info(f"Away Value @ t = 0: {self.away_value_t0: .3f}")
+        logger.info(f"Home Value @ t = 0: {self.results.home_value_t0: .3f}")
+        logger.info(f"Away Value @ t = 0: {self.results.away_value_t0: .3f}")
 
         logger.info("="*50)
         logger.info("Score Differential Predictions")
         logger.info("="*50)
-        exp_Xt_q1, lower_q1, upper_q1 = self.score_diff_interval(t=.25, interval_prob=interval_prob)
-        exp_Xt_q2, lower_q2, upper_q2 = self.score_diff_interval(t=.50, interval_prob=interval_prob)
-        exp_Xt_q3, lower_q3, upper_q3 = self.score_diff_interval(t=.75, interval_prob=interval_prob)
-        exp_Xt_q4, lower_q4, upper_q4 = self.score_diff_interval(t=1, interval_prob=interval_prob)
-        logger.info(f"Expected Score Diff @ t = 1/4: {exp_Xt_q1: .3f}, w/ {interval_prob*100}% Interval: ({lower_q1: .3f}, {upper_q1: .3f})")
-        logger.info(f"Expected Score Diff @ t = 1/2: {exp_Xt_q2: .3f}, w/ {interval_prob*100}% Interval: ({lower_q2: .3f}, {upper_q2: .3f})")
-        logger.info(f"Expected Score Diff @ t = 3/4: {exp_Xt_q3: .3f}, w/ {interval_prob*100}% Interval: ({lower_q3: .3f}, {upper_q3: .3f})")
-        logger.info(f"Expected Score Diff @ t = 1: {exp_Xt_q4: .3f}, w/ {interval_prob*100}% Interval: ({lower_q4: .3f}, {upper_q4: .3f})")
+        
+        logger.info(f"Expected Score Diff @ t = 1/4: {self.results.exp_score_diff_q1: .3f}, w/ {self.results.interval_prob*100}% Interval: ({self.results.lower_q1: .3f}, {self.results.upper_q1: .3f})")
+        logger.info(f"Expected Score Diff @ t = 1/2: {self.results.exp_score_diff_q2: .3f}, w/ {self.results.interval_prob*100}% Interval: ({self.results.lower_q2: .3f}, {self.results.upper_q2: .3f})")
+        logger.info(f"Expected Score Diff @ t = 3/4: {self.results.exp_score_diff_q3: .3f}, w/ {self.results.interval_prob*100}% Interval: ({self.results.lower_q3: .3f}, {self.results.upper_q3: .3f})")
+        logger.info(f"Expected Score Diff @ t = 1: {self.results.exp_score_diff_q4: .3f}, w/ {self.results.interval_prob*100}% Interval: ({self.results.lower_q4: .3f}, {self.results.upper_q4: .3f})")
+
+    def to_dataframe(self) -> pd.DataFrame:
+        """Convert simulation results to single-row DataFrame."""
+        if self.results is None:
+            raise RuntimeError("No results computed. Call compute_and_store_results() first.")
+        
+        data = {
+            'home_optimal_control': self.results.home_optimal_control,
+            'away_optimal_control': self.results.away_optimal_control,
+            'home_value_t0': self.results.home_value_t0,
+            'away_value_t0': self.results.away_value_t0,
+            'exp_score_diff_q1': self.results.exp_score_diff_q1,
+            'exp_score_diff_q2': self.results.exp_score_diff_q2,
+            'exp_score_diff_q3': self.results.exp_score_diff_q3,
+            'exp_score_diff_q4': self.results.exp_score_diff_q4,
+            'lower_q1': self.results.lower_q1,
+            'upper_q1': self.results.upper_q1,
+            'lower_q2': self.results.lower_q2,
+            'upper_q2': self.results.upper_q2,
+            'lower_q3': self.results.lower_q3,
+            'upper_q3': self.results.upper_q3,
+            'lower_q4': self.results.lower_q4,
+            'upper_q4': self.results.upper_q4,
+            'interval_prob': self.results.interval_prob,
+            'hbar': self.hbar,
+            'abar': self.abar,
+            'pred_nrtg': self.pred_nrtg,
+            'm_H': self.m_H,
+            'm_A': self.m_A,
+            'alpha_H': self.alpha_H,
+            'alpha_A': self.alpha_A,
+            'sigma': self.sigma
+        }
+
+        return pd.DataFrame([data])
         
     

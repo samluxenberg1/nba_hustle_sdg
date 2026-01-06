@@ -1,7 +1,7 @@
 """Main pipeline orchestration for game theory model"""
 import logging
 import pandas as pd
-from typing import Optional, Tuple, Dict
+from typing import Optional, Tuple, Dict, List
 from statsmodels.regression.linear_model import RegressionResultsWrapper
 
 from config.config import config
@@ -35,12 +35,18 @@ class GameTheoryPipeline:
         game_results: Dictionary of simulation results by date
     """
     def __init__(self):
-        """Initialize the pipeline with config. for game simulations"""
+        """Initialize the pipeline."""
         self.df_transformed: Optional[pd.DataFrame] = None
         self.dates: Optional[pd.Series] = None
+
+        # Model Parameters (Stage 1, 2, 3 coefficients + estimated parameters)
         self.params = ModelParameters()
-        self.params_df: Optional[pd.DataFrame] = None
-        self.game_results: Dict[str, Dict] = {}
+        self.params_df: Optional[pd.DataFrame] = None 
+
+        # Game simulation results
+        self.game_sims: Dict[pd.Timestamp, Dict] = {}
+        self.game_sims_df: Optional[pd.DataFrame] = None
+
 
         self.possession_calc = PossessionCalculator()
         self.game_simulator = GameSimulator()
@@ -155,7 +161,7 @@ class GameTheoryPipeline:
             m_A: float, 
             sigma: float, 
             show_plots: bool = False
-            ) -> Dict:
+            ) -> Tuple[Dict, pd.DataFrame]:
         """Solve optimal control problem for all games in test set"""
         return self.game_simulator.simulate_all_games(
             df_test=df_test, 
@@ -173,7 +179,7 @@ class GameTheoryPipeline:
             verbose: bool = False, 
             solve_control: bool = True, 
             show_plots: bool = False
-           ) -> Dict:
+           ) -> Tuple[Dict, pd.DataFrame]:
         """
         Process all stages for a single game date and solve optimal control problem
         
@@ -208,17 +214,20 @@ class GameTheoryPipeline:
         m_H, m_A, sigma, _ = self._run_stage3(df_trans, df_stage1, df_train_stage2, game_date, verbose)
         print(f"df_trans columns: {df_trans.columns.tolist()}")
         print(df_trans.query("GAME_ID==22200001"))
+        
         # Add date to results
         self.params.add_date(game_date)
 
         # Solve optimal control problem if requested
-        game_sims = {}
+        date_sims = {}
+        date_sims_df = pd.DataFrame()
+
         if solve_control and len(df_test_stage2) > 0:
-            game_sims = self._solve_optimal_control(df_test_stage2, df_poss, m_H, m_A, sigma, show_plots)
+            date_sims, date_sims_df = self._solve_optimal_control(df_test_stage2, df_poss, m_H, m_A, sigma, show_plots)
         
-        return game_sims
+        return date_sims, date_sims_df
     
-    def run(self, verbose: bool = True, solve_control: bool = True, show_plots: bool = False) -> Tuple[pd.DataFrame, Dict]:
+    def run(self, verbose: bool = True, solve_control: bool = True, show_plots: bool = False) -> pd.DataFrame:
         """
         Run the complete pipeline. 
 
@@ -245,10 +254,22 @@ class GameTheoryPipeline:
         dates_to_process = self.dates.copy()
         logger.info(f"Processing {len(dates_to_process)} dates.")
 
+        all_sims_dfs = []
+
         for game_date in dates_to_process:
             logger.info(f"Processing {game_date}")
-            game_sims = self.process_date(game_date, verbose, solve_control, show_plots)
-            self.game_results[game_date] = game_sims
+            date_sims, date_sims_df = self.process_date(game_date, verbose, solve_control, show_plots)
+            
+            # Store results
+            self.game_sims[game_date] = date_sims
+
+            # Store DataFrame if it has data
+            if not date_sims_df.empty:
+                all_sims_dfs.append(date_sims_df)
+            
+        # Consolidate all game simulation DataFrames
+        if all_sims_dfs:
+            self.game_sims_df = pd.concat(all_sims_dfs, ignore_index=True)
 
         # Convert parameters to DataFrame
         logger.info("Creating results DataFrame")
@@ -262,7 +283,7 @@ class GameTheoryPipeline:
         logger.info("Creating results DataFrame")
         #self.game_results_df = self.game_results.to_dataframe()
 
-        return self.params_df, self.game_results
+        return self.params_df
     
     def get_params(self) -> pd.DataFrame:
         """Get the parameter results DataFrame"""
@@ -271,11 +292,27 @@ class GameTheoryPipeline:
         
         return self.params_df
     
-    def get_game_results(self, game_date: Optional[str] = None) -> Dict:
-        """Get simulation results for games"""
+    def get_game_sims(self, game_date: Optional[str] = None) -> Dict:
+        """
+        Get simulation objects.
+        
+        Args:
+            game_date: Optional specific date
+
+        Returns:
+            Dict of SingleGameSim objects
+        """
         if game_date:
-            return self.game_results.get(game_date, {})
-        return self.game_results
+            game_date_ts = pd.Timestamp(game_date)
+            return self.game_sims.get(game_date_ts, {})
+        return self.game_sims
+    
+    def get_game_sims_df(self) -> pd.DataFrame:
+        """Get all game simulation results as DataFrame."""
+        if self.game_sims_df is None:
+            return pd.DataFrame()
+        
+        return self.game_sims_df
     
     def reset(self) -> None:
         """Reset the pipeline state"""

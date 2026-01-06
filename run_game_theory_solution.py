@@ -13,56 +13,88 @@ def main():
 
     # Initialize and run pipeline (uses config.yaml)
     pipeline = GameTheoryPipeline()
-    params, sim_results = pipeline.run()
+    pipeline.run()
 
-    # Create visualizations
-    print("\n" + "="*100)
-    print("Creating parameter visualizations...")
-    print("="*100)
-    create_all_plots(params)
+    # Get model parameters
+    params_df = pipeline.get_params()
+    print(f"Model Parameters: {len(params_df)} dates")
 
-    print("\nPipeline execution complete!")
+    # Get all game simulations as DataFrame 
+    game_sims_df = pipeline.get_game_sims_df()
+    print(f"Game simulations: {len(game_sims_df)} games")
 
-    return pipeline, params, sim_results
+    # Get simulation objects for a specific date
+    lakers_celtics = pipeline.get_game_sims('2024-10-22')[('LAL','BOS')]
+    print(lakers_celtics.results.home_optimal_control)
+
+    # Save both
+    params_df.to_csv('model_parameters.csv', index=False)
+    game_sims_df.to_csv('game_simulations.csv', index=False)
+
+
+    # # Create visualizations
+    # print("\n" + "="*100)
+    # print("Creating parameter visualizations...")
+    # print("="*100)
+    # create_all_plots(params)
+
+    # print("\nPipeline execution complete!")
+
+    # return pipeline, params, sim_results
 
 def quick_test():
     """Quick test without solving optimal control"""
     # Modify config temporarily
-    config['pipeline']['test_end_date'] = '2024-10-24'
+    config['pipeline']['test_end_date'] = '2024-10-22'
     config['visualization']['show_plots'] = False
 
+    # Initialize and run pipeline (uses config.yaml)
     pipeline = GameTheoryPipeline()
-    results, sim_results = pipeline.run(solve_control=True)
+    pipeline.run()
 
-    return pipeline, results, sim_results
+    # Get model parameters
+    params_df = pipeline.get_params()
+    print(f"Model Parameters: {len(params_df)} dates")
+
+    # Get all game simulations as DataFrame 
+    game_sims_df = pipeline.get_game_sims_df()
+    print(f"Game simulations: {len(game_sims_df)} games")
+
+    # Get simulation objects for a specific date
+    lakers_wolves = pipeline.get_game_sims('2024-10-22')[('LAL','MIN')]
+    print(lakers_wolves.results.home_optimal_control)
+
+    # Save both
+    params_df.to_csv('model_parameters.csv', index=False)
+    game_sims_df.to_csv('game_simulations.csv', index=False)
 
 if __name__ == "__main__":
     import os
 
     if len(sys.argv) > 1 and sys.argv[1] == 'test':
-        pipeline, results, sim_results = quick_test()
-        print("Pipeline")
-        print(pipeline)
-        print("\nResults")
-        print(results.head())
-        results_path = os.path.join('results',f"results_{config['pipeline']['test_end_date']}_test.csv")
-        results.to_csv(results_path, index=False)
-        print("%"*100)
-        print("Simulation Results")
-        print(sim_results)
-        print("%"*100)
+        quick_test()
+        # print("Pipeline")
+        # print(pipeline)
+        # print("\nResults")
+        # print(results.head())
+        # results_path = os.path.join('results',f"results_{config['pipeline']['test_end_date']}_test.csv")
+        # results.to_csv(results_path, index=False)
+        # print("%"*100)
+        # print("Simulation Results")
+        # print(sim_results)
+        # print("%"*100)
     else:
-        pipeline, results, sim_results = main()
-        print("Pipeline")
-        print(pipeline)
-        print("\nResults")
-        print(results.head())
-        results_path = os.path.join('results',f"results_{config['pipeline']['test_end_date']}.csv")
-        results.to_csv(results_path, index=False)
-        print("%"*100)
-        print("Simulation Results")
-        print(sim_results)
-        print("%"*100)
+        main()
+        # print("Pipeline")
+        # print(pipeline)
+        # print("\nResults")
+        # print(results.head())
+        # results_path = os.path.join('results',f"results_{config['pipeline']['test_end_date']}.csv")
+        # results.to_csv(results_path, index=False)
+        # print("%"*100)
+        # print("Simulation Results")
+        # print(sim_results)
+        # print("%"*100)
 
     # What do I need for metrics?
     # 1. Accuracy of optimal control for predicting winner
