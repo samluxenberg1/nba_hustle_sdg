@@ -10,6 +10,8 @@ from config.config import config
 @dataclass
 class GameParameters:
     """Parameters for a single game simulation"""
+    game_id: str
+    game_date: str
     home_team: str
     away_team: str
     hbar: float
@@ -71,6 +73,7 @@ class GameSimulator:
         self.n_points = config['simulation']['n_points']
         self.n_sim = config['simulation']['n_sim']
         self.T = config['simulation']['T']
+        self.interval_prob = config['simulation']['interval_prob']
 
     def run_simulation(self, params: GameParameters, show_plots: bool = True) -> SingleGameSim:
         """
@@ -97,14 +100,15 @@ class GameSimulator:
             m_A=adj['m_a_adj'],
             alpha_H=params.alpha_H,
             alpha_A=params.alpha_A,
-            sigma=adj['sigma_adj']
+            sigma=adj['sigma_adj'],
+            interval_prob=self.interval_prob
         )
 
         print("="*100)
-        print(f"Differential Game Results: {params.home_team} vs {params.away_team}")
+        print(f"Differential Game Results: {params.home_team} vs {params.away_team} on {params.game_date}; Game ID: {params.game_id}")
         print("="*100)
 
-        sgs.results_summary(interval_prob=.9)
+        sgs.results_summary()
         sgs.euler_maruyama()
 
         if show_plots:
@@ -122,7 +126,7 @@ class GameSimulator:
             sigma: float, 
             window: int = config['possession']['window'], 
             show_plots: bool = True
-        ) -> Dict[Tuple[str, str], SingleGameSim]:
+        ) -> Tuple[Dict, pd.DataFrame]:
         """
         Run simulations for all games in test set.
 
@@ -136,13 +140,16 @@ class GameSimulator:
             show_plots: Whether to display plots
 
         Returns:
-            Dictionary mapping (home_team, away_team) to simulation results
+            Tuple of (simulation objects dict, results DataFrame)
         """
         print("$"*150)
         print("Optimal Control Parameters")
         print("$"*150)
+        print(f"df_test columns: {df_test.columns.tolist()}")
+        print(df_test.head())
 
         results = {}
+        results_list = []
 
         for index, row in df_test.iterrows():
             # Extract game parameters
@@ -150,6 +157,8 @@ class GameSimulator:
             away_team = row['AWAY_TEAM']
 
             params = GameParameters(
+                game_id=row['GAME_ID'],
+                game_date=row['GAME_DATE'],
                 home_team=home_team, 
                 away_team=away_team,
                 hbar=row[f'HOME_AVG{window}_NET_COMPOSITE_EFFORT'],
@@ -167,10 +176,24 @@ class GameSimulator:
 
             # Run simulation
             sgs = self.run_simulation(params, show_plots)
+            sgs.compute_and_store_results()
+
+            # Store simulation object
             results[(home_team, away_team)] = sgs
 
+            # Get results as dict and add game info
+            game_results = sgs.to_dataframe().iloc[0].to_dict()
+            game_results['home_team'] = home_team
+            game_results['away_team'] = away_team
+            game_results['game_date'] = row.get('GAME_DATE', None)
+
+            results_list.append(game_results)
+
             print("\n\n")
+
+        # Create DataFrame from all results
+        results_df = pd.DataFrame(results_list)
         
-        return results
+        return results, results_df
 
 

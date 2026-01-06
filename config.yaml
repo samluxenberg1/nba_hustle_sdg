@@ -23,7 +23,7 @@ paths:
 pipeline:
   # Date range for processing
   test_start_date: "2024-10-22"
-  test_end_date: "2024-10-24"
+  test_end_date: "2025-04-13"
 
   # Rolling window size for calculations
   window: 10
@@ -90,7 +90,7 @@ simulation:
   # Output control
   show_plots: false
   save_simulations: false
-  plot_confidence_interval: 0.9
+  interval_prob: 0.9
 
 # ------------------------------------------------------------------------------------------
 # Possession Factor Calculation
